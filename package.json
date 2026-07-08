@@ -1,0 +1,31 @@
+{
+  "name": "rss-erp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RSS Construction ERP - Rehan Shahid & Sons Builders & Developers",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "tsx scripts/run-dev.ts",
+    "dev:api": "npm run dev --workspace=@rss/api",
+    "dev:web": "npm run dev --workspace=@rss/web",
+    "build": "npm run build --workspaces --if-present",
+    "db:start": "tsx scripts/start-postgres.ts",
+    "db:create": "tsx scripts/create-db.ts",
+    "db:setup": "npm run db:create && npm run db:push --workspace=@rss/api && npm run db:seed --workspace=@rss/api",
+    "check:services": "tsx scripts/check-services.ts",
+    "db:studio": "npm run db:studio --workspace=@rss/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "dotenv": "^16.6.1",
+    "embedded-postgres": "^17.10.0-beta.17",
+    "tsx": "^4.23.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

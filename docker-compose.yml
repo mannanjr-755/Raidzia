@@ -1,0 +1,35 @@
+# Local development uses embedded PostgreSQL on port 5433 (npm run db:start).
+# Docker is optional — if you use docker-compose instead, update DATABASE_URL to:
+# postgresql://rss_user:rss_password@localhost:5432/rss_erp?schema=public
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rss-erp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rss_user
+      POSTGRES_PASSWORD: rss_password
+      POSTGRES_DB: rss_erp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rss_user -d rss_erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rss-erp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

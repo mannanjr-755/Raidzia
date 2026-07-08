@@ -1,0 +1,784 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  DIRECTOR
+  PROJECT_MANAGER
+  SITE_ENGINEER
+  ARCHITECT
+  QUANTITY_SURVEYOR
+  ACCOUNTS
+  HR
+  SALES
+  INVENTORY_MANAGER
+  STORE_MANAGER
+  RECEPTION
+  CUSTOMER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum LandStatus {
+  RESEARCH
+  NEGOTIATION
+  DUE_DILIGENCE
+  APPROVED
+  PURCHASED
+  REJECTED
+}
+
+enum LandType {
+  RESIDENTIAL
+  COMMERCIAL
+  MIXED_USE
+  INDUSTRIAL
+  AGRICULTURAL
+}
+
+enum UnitStatus {
+  AVAILABLE
+  RESERVED
+  BOOKED
+  SOLD
+  TRANSFERRED
+  UNDER_CONSTRUCTION
+}
+
+enum UnitType {
+  APARTMENT
+  SHOP
+  OFFICE
+  WAREHOUSE
+  PLOT
+  PENTHOUSE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIAL
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum ExpenseStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum ExpenseCategory {
+  FUEL
+  ELECTRICITY
+  WATER
+  CONSTRUCTION
+  LABOUR
+  MATERIAL
+  EQUIPMENT
+  OFFICE
+  MARKETING
+  TRANSPORT
+  UTILITIES
+  MAINTENANCE
+  OTHER
+}
+
+enum POStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  TRANSFER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  LEAVE
+}
+
+enum MachineryStatus {
+  OPERATIONAL
+  MAINTENANCE
+  REPAIR
+  IDLE
+  RETIRED
+}
+
+enum InspectionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  INSTALLMENT_DUE
+  BOOKING
+  APPROVAL
+  LOW_STOCK
+  PROJECT_DELAY
+}
+
+enum BuildingType {
+  RESIDENTIAL
+  COMMERCIAL
+  MIXED_USE
+}
+
+// ==================== AUTH & USERS ====================
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String
+  firstName        String
+  lastName         String
+  phone            String?
+  role             UserRole  @default(CUSTOMER)
+  avatar           String?
+  isActive         Boolean   @default(true)
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  emailVerified    Boolean   @default(false)
+  lastLoginAt      DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  refreshTokens   RefreshToken[]
+  activityLogs    ActivityLog[]
+  notifications   Notification[]
+  managedProjects Project[]       @relation("ProjectManager")
+  leads           Lead[]          @relation("LeadAssignee")
+  bookings        Booking[]       @relation("SalesAgent")
+  expenses        Expense[]       @relation("ExpenseCreator")
+  inspections     Inspection[]
+  attendances     Attendance[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+// ==================== PROJECTS ====================
+
+model Project {
+  id              String        @id @default(cuid())
+  code            String        @unique
+  name            String
+  description     String?
+  location        String
+  city            String?
+  clientName      String?
+  status          ProjectStatus @default(PLANNING)
+  budget          Decimal       @default(0) @db.Decimal(15, 2)
+  estimatedCost   Decimal       @default(0) @db.Decimal(15, 2)
+  actualCost      Decimal       @default(0) @db.Decimal(15, 2)
+  completionPct   Decimal       @default(0) @db.Decimal(5, 2)
+  startDate       DateTime?
+  endDate         DateTime?
+  managerId       String?
+  manager         User?         @relation("ProjectManager", fields: [managerId], references: [id])
+  landParcelId    String?
+  landParcel      LandParcel?   @relation(fields: [landParcelId], references: [id])
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  buildings    Building[]
+  milestones   ProjectMilestone[]
+  tasks        ProjectTask[]
+  progressLogs DailyProgress[]
+  expenses     Expense[]
+  inspections  Inspection[]
+}
+
+model ProjectMilestone {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  isCompleted Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+}
+
+model ProjectTask {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  assignedTo  String?
+  priority    String    @default("MEDIUM")
+  status      String    @default("TODO")
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model DailyProgress {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now())
+  description String
+  workDone    String?
+  labourCount Int      @default(0)
+  weather     String?
+  photos      String[]
+  createdAt   DateTime @default(now())
+}
+
+// ==================== LAND BANK ====================
+
+model LandParcel {
+  id                String     @id @default(cuid())
+  landId            String     @unique
+  title             String
+  location          String
+  latitude          Decimal?   @db.Decimal(10, 7)
+  longitude         Decimal?   @db.Decimal(10, 7)
+  areaSqYards       Decimal    @db.Decimal(12, 2)
+  areaSqFeet        Decimal    @db.Decimal(12, 2)
+  landType          LandType   @default(RESIDENTIAL)
+  status            LandStatus @default(RESEARCH)
+  purchasePrice     Decimal?   @db.Decimal(15, 2)
+  marketPrice       Decimal?   @db.Decimal(15, 2)
+  roadWidth         Decimal?   @db.Decimal(6, 2)
+  isCornerPlot      Boolean    @default(false)
+  hasElectricity    Boolean    @default(false)
+  hasGas            Boolean    @default(false)
+  hasWater          Boolean    @default(false)
+  legalStatus       String?
+  ownerName         String?
+  ownerPhone        String?
+  brokerName        String?
+  brokerPhone       String?
+  notes             String?
+  deletedAt         DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  negotiations FeasibilityStudy[]
+  projects     Project[]
+  documents    LandDocument[]
+}
+
+model LandDocument {
+  id           String     @id @default(cuid())
+  landParcelId String
+  landParcel   LandParcel @relation(fields: [landParcelId], references: [id], onDelete: Cascade)
+  name         String
+  type         String
+  url          String
+  createdAt    DateTime   @default(now())
+}
+
+model FeasibilityStudy {
+  id                    String       @id @default(cuid())
+  landParcelId          String
+  landParcel            LandParcel   @relation(fields: [landParcelId], references: [id], onDelete: Cascade)
+  title                 String
+  buildingType          BuildingType @default(RESIDENTIAL)
+  landCost              Decimal      @db.Decimal(15, 2)
+  landArea              Decimal      @db.Decimal(12, 2)
+  fsi                   Decimal      @default(1) @db.Decimal(5, 2)
+  maxFloors             Int          @default(1)
+  constructionCost      Decimal      @default(0) @db.Decimal(15, 2)
+  materialCost          Decimal      @default(0) @db.Decimal(15, 2)
+  labourCost            Decimal      @default(0) @db.Decimal(15, 2)
+  machineryCost         Decimal      @default(0) @db.Decimal(15, 2)
+  professionalFees      Decimal      @default(0) @db.Decimal(15, 2)
+  marketingCost         Decimal      @default(0) @db.Decimal(15, 2)
+  financeCost           Decimal      @default(0) @db.Decimal(15, 2)
+  taxes                 Decimal      @default(0) @db.Decimal(15, 2)
+  contingency           Decimal      @default(0) @db.Decimal(15, 2)
+  sellingPricePerSqFt   Decimal      @default(0) @db.Decimal(10, 2)
+  totalInvestment       Decimal      @default(0) @db.Decimal(15, 2)
+  totalRevenue          Decimal      @default(0) @db.Decimal(15, 2)
+  grossProfit           Decimal      @default(0) @db.Decimal(15, 2)
+  netProfit             Decimal      @default(0) @db.Decimal(15, 2)
+  roi                   Decimal      @default(0) @db.Decimal(8, 4)
+  irr                   Decimal      @default(0) @db.Decimal(8, 4)
+  npv                   Decimal      @default(0) @db.Decimal(15, 2)
+  breakEvenMonths       Int          @default(0)
+  paybackMonths         Int          @default(0)
+  profitMargin          Decimal      @default(0) @db.Decimal(8, 4)
+  costPerSqFt           Decimal      @default(0) @db.Decimal(10, 2)
+  investmentScore       Int          @default(0)
+  riskScore             Int          @default(0)
+  aiRecommendation      String?
+  aiSummary             String?
+  isRecommended         Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+}
+
+// ==================== PROPERTIES ====================
+
+model Building {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  tower       String?
+  totalFloors Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  floors Floor[]
+}
+
+model Floor {
+  id         String   @id @default(cuid())
+  buildingId String
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  number     Int
+  name       String?
+  createdAt  DateTime @default(now())
+
+  units Unit[]
+}
+
+model Unit {
+  id          String     @id @default(cuid())
+  floorId     String
+  floor       Floor      @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  unitNumber  String
+  unitType    UnitType   @default(APARTMENT)
+  area        Decimal    @db.Decimal(10, 2)
+  price       Decimal    @db.Decimal(15, 2)
+  status      UnitStatus @default(AVAILABLE)
+  bedrooms    Int?
+  bathrooms   Int?
+  description String?
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  bookings Booking[]
+}
+
+// ==================== CRM & SALES ====================
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String
+  cnic      String?
+  address   String?
+  city      String?
+  source    String?
+  notes     String?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  leads    Lead[]
+  bookings Booking[]
+}
+
+model Lead {
+  id           String     @id @default(cuid())
+  customerId   String?
+  customer     Customer?  @relation(fields: [customerId], references: [id])
+  name         String
+  email        String?
+  phone        String
+  source       String?
+  status       LeadStatus @default(NEW)
+  budget       Decimal?   @db.Decimal(15, 2)
+  interest     String?
+  notes        String?
+  assigneeId   String?
+  assignee     User?      @relation("LeadAssignee", fields: [assigneeId], references: [id])
+  nextFollowUp DateTime?
+  deletedAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  activities LeadActivity[]
+}
+
+model LeadActivity {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type        String
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingNumber   String        @unique
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  unitId          String
+  unit            Unit          @relation(fields: [unitId], references: [id])
+  salesAgentId    String?
+  salesAgent      User?         @relation("SalesAgent", fields: [salesAgentId], references: [id])
+  status          BookingStatus @default(PENDING)
+  totalAmount     Decimal       @db.Decimal(15, 2)
+  downPayment     Decimal       @default(0) @db.Decimal(15, 2)
+  discount        Decimal       @default(0) @db.Decimal(15, 2)
+  bookingDate     DateTime      @default(now())
+  possessionDate  DateTime?
+  notes           String?
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  installments Installment[]
+  payments     Payment[]
+}
+
+model Installment {
+  id          String            @id @default(cuid())
+  bookingId   String
+  booking     Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  number      Int
+  amount      Decimal           @db.Decimal(15, 2)
+  dueDate     DateTime
+  paidAmount  Decimal           @default(0) @db.Decimal(15, 2)
+  status      InstallmentStatus @default(PENDING)
+  paidAt      DateTime?
+  createdAt   DateTime          @default(now())
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  bookingId     String?
+  booking       Booking? @relation(fields: [bookingId], references: [id])
+  amount        Decimal  @db.Decimal(15, 2)
+  method        String   @default("CASH")
+  reference     String?
+  paymentDate   DateTime @default(now())
+  notes         String?
+  journalEntryId String?
+  createdAt     DateTime @default(now())
+}
+
+// ==================== ACCOUNTING ====================
+
+model ChartAccount {
+  id        String      @id @default(cuid())
+  code      String      @unique
+  name      String
+  type      AccountType
+  balance   Decimal     @default(0) @db.Decimal(15, 2)
+  isActive  Boolean     @default(true)
+  parentId  String?
+  parent    ChartAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children  ChartAccount[] @relation("AccountHierarchy")
+  deletedAt DateTime?
+  createdAt DateTime    @default(now())
+
+  journalLines JournalLine[]
+  expenses     Expense[]
+}
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  entryNumber String   @unique
+  date        DateTime @default(now())
+  description String
+  reference   String?
+  createdAt   DateTime @default(now())
+
+  lines JournalLine[]
+}
+
+model JournalLine {
+  id             String       @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        ChartAccount @relation(fields: [accountId], references: [id])
+  debit          Decimal      @default(0) @db.Decimal(15, 2)
+  credit         Decimal      @default(0) @db.Decimal(15, 2)
+  description    String?
+}
+
+// ==================== EXPENSES ====================
+
+model Expense {
+  id          String          @id @default(cuid())
+  projectId   String?
+  project     Project?        @relation(fields: [projectId], references: [id])
+  accountId   String?
+  account     ChartAccount?   @relation(fields: [accountId], references: [id])
+  creatorId   String?
+  creator     User?           @relation("ExpenseCreator", fields: [creatorId], references: [id])
+  description String
+  amount      Decimal         @db.Decimal(15, 2)
+  category    ExpenseCategory @default(OTHER)
+  status      ExpenseStatus   @default(PENDING)
+  expenseDate DateTime        @default(now())
+  receiptUrl  String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+// ==================== PROCUREMENT & INVENTORY ====================
+
+model Supplier {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  rating    Decimal   @default(0) @db.Decimal(3, 2)
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id          String   @id @default(cuid())
+  poNumber    String   @unique
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  status      POStatus @default(DRAFT)
+  totalAmount Decimal  @default(0) @db.Decimal(15, 2)
+  orderDate   DateTime @default(now())
+  expectedDate DateTime?
+  notes       String?
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  items PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quantity        Decimal       @db.Decimal(12, 2)
+  unitPrice       Decimal       @db.Decimal(12, 2)
+  amount          Decimal       @db.Decimal(15, 2)
+}
+
+model InventoryItem {
+  id           String   @id @default(cuid())
+  sku          String   @unique
+  name         String
+  category     String
+  unit         String   @default("unit")
+  quantity     Decimal  @default(0) @db.Decimal(12, 2)
+  minStock     Decimal  @default(0) @db.Decimal(12, 2)
+  unitCost     Decimal  @default(0) @db.Decimal(12, 2)
+  barcode      String?
+  warehouse    String   @default("Main")
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  movements         StockMovement[]
+  purchaseOrderItems PurchaseOrderItem[]
+}
+
+model StockMovement {
+  id              String            @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+  type            StockMovementType
+  quantity        Decimal           @db.Decimal(12, 2)
+  reference       String?
+  projectId       String?
+  notes           String?
+  createdAt       DateTime          @default(now())
+}
+
+// ==================== HR ====================
+
+model Employee {
+  id           String    @id @default(cuid())
+  employeeCode String    @unique
+  firstName    String
+  lastName     String
+  email        String?
+  phone        String
+  department   String?
+  designation  String?
+  salary       Decimal   @default(0) @db.Decimal(12, 2)
+  joinDate     DateTime  @default(now())
+  isActive     Boolean   @default(true)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  attendances Attendance[]
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  employeeId String
+  employee   Employee         @relation(fields: [employeeId], references: [id])
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id])
+  date       DateTime         @default(now())
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     AttendanceStatus @default(PRESENT)
+  notes      String?
+  createdAt  DateTime         @default(now())
+
+  @@unique([employeeId, date])
+}
+
+// ==================== MACHINERY ====================
+
+model Machinery {
+  id              String          @id @default(cuid())
+  name            String
+  type            String
+  registrationNo  String?
+  status          MachineryStatus @default(OPERATIONAL)
+  purchaseDate    DateTime?
+  purchaseCost    Decimal?        @db.Decimal(15, 2)
+  operatorName    String?
+  fuelCapacity    Decimal?        @db.Decimal(8, 2)
+  lastMaintenance DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime        @default(now())
+
+  maintenanceLogs MaintenanceLog[]
+}
+
+model MaintenanceLog {
+  id          String    @id @default(cuid())
+  machineryId String
+  machinery   Machinery @relation(fields: [machineryId], references: [id], onDelete: Cascade)
+  type        String
+  description String
+  cost        Decimal   @default(0) @db.Decimal(12, 2)
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+// ==================== INSPECTION ====================
+
+model Inspection {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id])
+  inspectorId String?
+  inspector   User?            @relation(fields: [inspectorId], references: [id])
+  title       String
+  type        String           @default("QUALITY")
+  status      InspectionStatus @default(DRAFT)
+  date        DateTime         @default(now())
+  notes       String?
+  photos      String[]
+  gpsLat      Decimal?         @db.Decimal(10, 7)
+  gpsLng      Decimal?         @db.Decimal(10, 7)
+  createdAt   DateTime         @default(now())
+
+  checklistItems InspectionItem[]
+}
+
+model InspectionItem {
+  id           String     @id @default(cuid())
+  inspectionId String
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  item         String
+  isPassed     Boolean    @default(false)
+  notes        String?
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+}

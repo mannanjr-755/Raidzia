@@ -1,0 +1,118 @@
+export declare function generateInstallments(bookingId: string, totalAmount: number, downPayment: number, count: number, startDate: Date): Promise<{
+    bookingId: string;
+    number: number;
+    amount: number;
+    dueDate: Date;
+}[]>;
+export declare function confirmBooking(bookingId: string, userId: string): Promise<({
+    unit: {
+        id: string;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        description: string | null;
+        status: import(".prisma/client").$Enums.UnitStatus;
+        floorId: string;
+        unitNumber: string;
+        unitType: import(".prisma/client").$Enums.UnitType;
+        area: import("@prisma/client/runtime/library").Decimal;
+        price: import("@prisma/client/runtime/library").Decimal;
+        bedrooms: number | null;
+        bathrooms: number | null;
+    };
+    customer: {
+        name: string;
+        id: string;
+        email: string | null;
+        phone: string;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        city: string | null;
+        source: string | null;
+        notes: string | null;
+        cnic: string | null;
+        address: string | null;
+    };
+    installments: {
+        number: number;
+        id: string;
+        createdAt: Date;
+        status: import(".prisma/client").$Enums.InstallmentStatus;
+        amount: import("@prisma/client/runtime/library").Decimal;
+        bookingId: string;
+        dueDate: Date;
+        paidAmount: import("@prisma/client/runtime/library").Decimal;
+        paidAt: Date | null;
+    }[];
+} & {
+    id: string;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    status: import(".prisma/client").$Enums.BookingStatus;
+    customerId: string;
+    notes: string | null;
+    bookingNumber: string;
+    unitId: string;
+    salesAgentId: string | null;
+    totalAmount: import("@prisma/client/runtime/library").Decimal;
+    downPayment: import("@prisma/client/runtime/library").Decimal;
+    discount: import("@prisma/client/runtime/library").Decimal;
+    bookingDate: Date;
+    possessionDate: Date | null;
+}) | null>;
+export declare function approveExpense(expenseId: string, approverId: string): Promise<{
+    project: {
+        name: string;
+        id: string;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        code: string;
+        description: string | null;
+        location: string;
+        city: string | null;
+        clientName: string | null;
+        status: import(".prisma/client").$Enums.ProjectStatus;
+        budget: import("@prisma/client/runtime/library").Decimal;
+        estimatedCost: import("@prisma/client/runtime/library").Decimal;
+        actualCost: import("@prisma/client/runtime/library").Decimal;
+        completionPct: import("@prisma/client/runtime/library").Decimal;
+        startDate: Date | null;
+        endDate: Date | null;
+        managerId: string | null;
+        landParcelId: string | null;
+    } | null;
+} & {
+    id: string;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    description: string;
+    status: import(".prisma/client").$Enums.ExpenseStatus;
+    projectId: string | null;
+    accountId: string | null;
+    creatorId: string | null;
+    amount: import("@prisma/client/runtime/library").Decimal;
+    category: import(".prisma/client").$Enums.ExpenseCategory;
+    expenseDate: Date;
+    receiptUrl: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+}>;
+export declare function stockOut(itemId: string, quantity: number, projectId?: string, notes?: string): Promise<{
+    name: string;
+    id: string;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    category: string;
+    unit: string;
+    sku: string;
+    quantity: import("@prisma/client/runtime/library").Decimal;
+    minStock: import("@prisma/client/runtime/library").Decimal;
+    unitCost: import("@prisma/client/runtime/library").Decimal;
+    barcode: string | null;
+    warehouse: string;
+} | null>;
