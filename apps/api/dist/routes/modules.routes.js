@@ -7,6 +7,7 @@ const auth_1 = require("../middleware/auth");
 const business_service_1 = require("../services/business.service");
 const route_utils_1 = require("../lib/route-utils");
 const router = (0, express_1.Router)();
+const param = (value) => Array.isArray(value) ? value[0] : String(value || '');
 const expenseCategoryEnum = zod_1.z.enum([
     'FUEL', 'ELECTRICITY', 'WATER', 'CONSTRUCTION', 'LABOUR', 'MATERIAL',
     'EQUIPMENT', 'OFFICE', 'MARKETING', 'TRANSPORT', 'UTILITIES', 'MAINTENANCE', 'OTHER',
@@ -21,7 +22,7 @@ const expenseSchema = zod_1.z.object({
 });
 const inventorySchema = zod_1.z.object({
     name: zod_1.z.string().min(1, 'Name is required'),
-    sku: zod_1.z.string().min(1, 'SKU is required'),
+    sku: zod_1.z.string().optional(),
     category: zod_1.z.string().min(1, 'Category is required'),
     unit: zod_1.z.string().min(1).default('pcs'),
     quantity: zod_1.z.coerce.number().min(0).default(0),
@@ -81,7 +82,7 @@ router.post('/expenses', auth_1.authenticate, (0, auth_1.authorize)('expenses:wr
 });
 router.post('/expenses/:id/approve', auth_1.authenticate, (0, auth_1.authorize)('expenses:write'), async (req, res) => {
     try {
-        const expense = await (0, business_service_1.approveExpense)(req.params.id, req.user.userId);
+        const expense = await (0, business_service_1.approveExpense)(param(req.params.id), req.user.userId);
         res.json({ success: true, data: expense });
     }
     catch (e) {
@@ -96,8 +97,12 @@ router.post('/inventory', auth_1.authenticate, (0, auth_1.authorize)('inventory:
     const parsed = inventorySchema.safeParse(req.body);
     if (!parsed.success)
         return (0, route_utils_1.validationError)(res, parsed.error.errors[0]?.message || 'Invalid inventory data');
+    const sku = parsed.data.sku?.trim() ? (0, route_utils_1.normalizeCode)(parsed.data.sku) : await (0, route_utils_1.generateInventorySku)();
+    const unique = await (0, route_utils_1.ensureUniqueCode)(res, () => prisma_1.prisma.inventoryItem.findUnique({ where: { sku }, select: { id: true, deletedAt: true } }));
+    if (!unique)
+        return;
     try {
-        const item = await prisma_1.prisma.inventoryItem.create({ data: parsed.data });
+        const item = await prisma_1.prisma.inventoryItem.create({ data: { ...parsed.data, sku } });
         res.status(201).json({ success: true, data: item });
     }
     catch (error) {
@@ -105,25 +110,26 @@ router.post('/inventory', auth_1.authenticate, (0, auth_1.authorize)('inventory:
     }
 });
 router.post('/inventory/:id/stock-in', auth_1.authenticate, (0, auth_1.authorize)('inventory:write'), async (req, res) => {
+    const id = param(req.params.id);
     const parsed = stockSchema.safeParse(req.body);
     if (!parsed.success)
         return (0, route_utils_1.validationError)(res, parsed.error.errors[0]?.message || 'Invalid stock data');
     try {
         await prisma_1.prisma.$transaction([
             prisma_1.prisma.inventoryItem.update({
-                where: { id: req.params.id },
+                where: { id },
                 data: { quantity: { increment: parsed.data.quantity } },
             }),
             prisma_1.prisma.stockMovement.create({
                 data: {
-                    inventoryItemId: req.params.id,
+                    inventoryItemId: id,
                     type: 'IN',
                     quantity: parsed.data.quantity,
                     notes: parsed.data.notes,
                 },
             }),
         ]);
-        const item = await prisma_1.prisma.inventoryItem.findUnique({ where: { id: req.params.id } });
+        const item = await prisma_1.prisma.inventoryItem.findUnique({ where: { id } });
         res.json({ success: true, data: item });
     }
     catch (error) {
@@ -135,7 +141,7 @@ router.post('/inventory/:id/stock-out', auth_1.authenticate, (0, auth_1.authoriz
     if (!parsed.success)
         return (0, route_utils_1.validationError)(res, parsed.error.errors[0]?.message || 'Invalid stock data');
     try {
-        const item = await (0, business_service_1.stockOut)(req.params.id, parsed.data.quantity, req.body.projectId, parsed.data.notes);
+        const item = await (0, business_service_1.stockOut)(param(req.params.id), parsed.data.quantity, req.body.projectId, parsed.data.notes);
         res.json({ success: true, data: item });
     }
     catch (e) {
@@ -143,8 +149,9 @@ router.post('/inventory/:id/stock-out', auth_1.authenticate, (0, auth_1.authoriz
     }
 });
 router.get('/properties/digital-twin/:projectId', auth_1.authenticate, (0, auth_1.authorize)('digital-twin:read'), async (req, res) => {
+    const projectId = param(req.params.projectId);
     const buildings = await prisma_1.prisma.building.findMany({
-        where: { projectId: req.params.projectId },
+        where: { projectId },
         include: {
             floors: {
                 orderBy: { number: 'asc' },
@@ -171,9 +178,10 @@ router.get('/notifications', auth_1.authenticate, (0, auth_1.authorize)('notific
     res.json({ success: true, data: items });
 });
 router.patch('/notifications/:id/read', auth_1.authenticate, (0, auth_1.authorize)('notifications:read'), async (req, res) => {
+    const id = param(req.params.id);
     try {
         await prisma_1.prisma.notification.updateMany({
-            where: { id: req.params.id, userId: req.user.userId },
+            where: { id, userId: req.user.userId },
             data: { isRead: true },
         });
         res.json({ success: true, data: null });

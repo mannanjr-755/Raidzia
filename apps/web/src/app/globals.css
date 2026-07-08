@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --font-geist-sans: Inter;
+  --font-display: "Playfair Display";
   --gold: 43 74% 49%;
   --gold-light: 43 74% 92%;
   --luxury-white: 40 33% 98%;

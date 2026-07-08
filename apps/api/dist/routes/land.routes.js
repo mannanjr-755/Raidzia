@@ -7,8 +7,9 @@ const auth_1 = require("../middleware/auth");
 const feasibility_service_1 = require("../services/feasibility.service");
 const route_utils_1 = require("../lib/route-utils");
 const router = (0, express_1.Router)();
+const param = (value) => Array.isArray(value) ? value[0] : String(value || '');
 const landSchema = zod_1.z.object({
-    landId: zod_1.z.string().min(1),
+    landId: zod_1.z.string().optional(),
     title: zod_1.z.string().min(1),
     location: zod_1.z.string().min(1),
     latitude: zod_1.z.coerce.number().optional(),
@@ -49,21 +50,35 @@ router.get('/', auth_1.authenticate, (0, auth_1.authorize)('land:read'), async (
     ]);
     res.json({ success: true, data: { items, total, page, limit, totalPages: Math.ceil(total / limit) } });
 });
+router.get('/next-id', auth_1.authenticate, (0, auth_1.authorize)('land:write'), async (_req, res) => {
+    try {
+        const landId = await (0, route_utils_1.generateLandId)();
+        res.json({ success: true, data: { landId } });
+    }
+    catch (error) {
+        (0, route_utils_1.sendPrismaError)(res, error, 'Failed to generate land ID');
+    }
+});
 router.get('/:id', auth_1.authenticate, (0, auth_1.authorize)('land:read'), async (req, res) => {
+    const id = param(req.params.id);
     const land = await prisma_1.prisma.landParcel.findFirst({
-        where: { id: req.params.id, deletedAt: null },
+        where: { id, deletedAt: null },
         include: { negotiations: true, documents: true, projects: true },
     });
     if (!land)
-        return res.status(404).json({ success: false, error: 'Not found' });
+        return res.status(404).json({ success: false, message: 'Not found', error: 'Not found' });
     res.json({ success: true, data: land });
 });
 router.post('/', auth_1.authenticate, (0, auth_1.authorize)('land:write'), async (req, res) => {
     const parsed = landSchema.safeParse(req.body);
     if (!parsed.success)
-        return res.status(400).json({ success: false, error: parsed.error.errors[0]?.message });
+        return (0, route_utils_1.validationError)(res, parsed.error.errors[0]?.message || 'Invalid land data');
+    const landId = parsed.data.landId?.trim() ? (0, route_utils_1.normalizeCode)(parsed.data.landId) : await (0, route_utils_1.generateLandId)();
+    const unique = await (0, route_utils_1.ensureUniqueCode)(res, () => prisma_1.prisma.landParcel.findUnique({ where: { landId }, select: { id: true, deletedAt: true } }));
+    if (!unique)
+        return;
     try {
-        const land = await prisma_1.prisma.landParcel.create({ data: parsed.data });
+        const land = await prisma_1.prisma.landParcel.create({ data: { ...parsed.data, landId } });
         res.status(201).json({ success: true, data: land });
     }
     catch (error) {
@@ -71,11 +86,18 @@ router.post('/', auth_1.authenticate, (0, auth_1.authorize)('land:write'), async
     }
 });
 router.put('/:id', auth_1.authenticate, (0, auth_1.authorize)('land:write'), async (req, res) => {
+    const id = param(req.params.id);
     const parsed = landSchema.partial().safeParse(req.body);
     if (!parsed.success)
-        return res.status(400).json({ success: false, error: parsed.error.errors[0]?.message });
+        return (0, route_utils_1.validationError)(res, parsed.error.errors[0]?.message || 'Invalid land data');
+    const landId = parsed.data.landId ? (0, route_utils_1.normalizeCode)(parsed.data.landId) : undefined;
+    if (landId) {
+        const unique = await (0, route_utils_1.ensureUniqueCode)(res, () => prisma_1.prisma.landParcel.findUnique({ where: { landId }, select: { id: true, deletedAt: true } }), id);
+        if (!unique)
+            return;
+    }
     try {
-        const land = await prisma_1.prisma.landParcel.update({ where: { id: req.params.id }, data: parsed.data });
+        const land = await prisma_1.prisma.landParcel.update({ where: { id }, data: { ...parsed.data, ...(landId ? { landId } : {}) } });
         res.json({ success: true, data: land });
     }
     catch (error) {
@@ -83,8 +105,15 @@ router.put('/:id', auth_1.authenticate, (0, auth_1.authorize)('land:write'), asy
     }
 });
 router.delete('/:id', auth_1.authenticate, (0, auth_1.authorize)('land:delete'), async (req, res) => {
+    const id = param(req.params.id);
     try {
-        await prisma_1.prisma.landParcel.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
+        const existing = await prisma_1.prisma.landParcel.findUnique({ where: { id }, select: { landId: true } });
+        if (!existing)
+            return res.status(404).json({ success: false, message: 'Not found', error: 'Not found' });
+        await prisma_1.prisma.landParcel.update({
+            where: { id },
+            data: { deletedAt: new Date(), landId: (0, route_utils_1.releaseCodeValue)(existing.landId) },
+        });
         res.json({ success: true, data: null });
     }
     catch (error) {
@@ -92,10 +121,11 @@ router.delete('/:id', auth_1.authenticate, (0, auth_1.authorize)('land:delete'),
     }
 });
 router.post('/:id/feasibility', auth_1.authenticate, (0, auth_1.authorize)('land:feasibility'), async (req, res) => {
+    const id = param(req.params.id);
     try {
-        const land = await prisma_1.prisma.landParcel.findUnique({ where: { id: req.params.id } });
+        const land = await prisma_1.prisma.landParcel.findUnique({ where: { id } });
         if (!land)
-            return res.status(404).json({ success: false, error: 'Land not found' });
+            return res.status(404).json({ success: false, message: 'Land not found', error: 'Land not found' });
         const input = {
             landCost: req.body.landCost ?? Number(land.purchasePrice || land.marketPrice || 0),
             landArea: req.body.landArea ?? Number(land.areaSqFeet),
@@ -116,7 +146,7 @@ router.post('/:id/feasibility', auth_1.authenticate, (0, auth_1.authorize)('land
         };
         const result = (0, feasibility_service_1.calculateFeasibility)(input);
         const study = await prisma_1.prisma.feasibilityStudy.create({
-            data: (0, feasibility_service_1.mapFeasibilityToDb)(input, result, req.params.id, req.body.title || `Feasibility - ${land.title}`, req.body.buildingType || 'RESIDENTIAL'),
+            data: (0, feasibility_service_1.mapFeasibilityToDb)(input, result, id, req.body.title || `Feasibility - ${land.title}`, req.body.buildingType || 'RESIDENTIAL'),
         });
         res.status(201).json({ success: true, data: { ...study, calculations: result } });
     }

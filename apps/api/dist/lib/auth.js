@@ -12,10 +12,12 @@ exports.toNum = toNum;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const shared_1 = require("@rss/shared");
 function signAccessToken(payload) {
-    return jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '15m' });
+    const options = { expiresIn: (process.env.JWT_EXPIRES_IN || '15m') };
+    return jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET, options);
 }
 function signRefreshToken(payload) {
-    return jsonwebtoken_1.default.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
+    const options = { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '7d') };
+    return jsonwebtoken_1.default.sign(payload, process.env.JWT_REFRESH_SECRET, options);
 }
 function verifyAccessToken(token) {
     return jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);

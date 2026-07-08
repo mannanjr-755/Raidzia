@@ -14,6 +14,7 @@ uploads/
 
 # next.js
 /.next/
+**/.next/
 /out/
 
 # production

@@ -1,4 +1,5 @@
-import { UserRole, type Permission } from '@rss/shared';
+import type { UserRole } from '@prisma/client';
+import { type Permission } from '@rss/shared';
 export interface JwtPayload {
     userId: string;
     email: string;

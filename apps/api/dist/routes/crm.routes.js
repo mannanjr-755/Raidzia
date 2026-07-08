@@ -7,6 +7,7 @@ const auth_1 = require("../middleware/auth");
 const business_service_1 = require("../services/business.service");
 const route_utils_1 = require("../lib/route-utils");
 const router = (0, express_1.Router)();
+const param = (value) => Array.isArray(value) ? value[0] : String(value || '');
 const leadSchema = zod_1.z.object({
     name: zod_1.z.string().min(1, 'Name is required'),
     phone: zod_1.z.string().min(1, 'Phone is required'),
@@ -66,7 +67,7 @@ router.post('/bookings', auth_1.authenticate, (0, auth_1.authorize)('sales:write
 });
 router.post('/bookings/:id/confirm', auth_1.authenticate, (0, auth_1.authorize)('sales:write'), async (req, res) => {
     try {
-        const booking = await (0, business_service_1.confirmBooking)(req.params.id, req.user.userId);
+        const booking = await (0, business_service_1.confirmBooking)(param(req.params.id), req.user.userId);
         res.json({ success: true, data: booking });
     }
     catch (e) {
@@ -97,12 +98,13 @@ router.post('/leads', auth_1.authenticate, (0, auth_1.authorize)('crm:write'), a
     }
 });
 router.put('/leads/:id', auth_1.authenticate, (0, auth_1.authorize)('crm:write'), async (req, res) => {
+    const id = param(req.params.id);
     const parsed = leadSchema.partial().safeParse(req.body);
     if (!parsed.success)
         return (0, route_utils_1.validationError)(res, parsed.error.errors[0]?.message || 'Invalid lead data');
     try {
         const lead = await prisma_1.prisma.lead.update({
-            where: { id: req.params.id },
+            where: { id },
             data: parsed.data,
             include: { assignee: { select: { firstName: true, lastName: true } } },
         });

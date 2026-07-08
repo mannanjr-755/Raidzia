@@ -11,7 +11,7 @@
     "dev": "tsx scripts/run-dev.ts",
     "dev:api": "npm run dev --workspace=@rss/api",
     "dev:web": "npm run dev --workspace=@rss/web",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api && npm run build --workspace=@rss/web",
     "db:start": "tsx scripts/start-postgres.ts",
     "db:create": "tsx scripts/create-db.ts",
     "db:setup": "npm run db:create && npm run db:push --workspace=@rss/api && npm run db:seed --workspace=@rss/api",
