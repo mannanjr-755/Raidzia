@@ -59,7 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await api.login(email, password);
       setTokens(data.accessToken, data.refreshToken);
       setUser(data.user);
-      router.push('/');
+      const redirect =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('redirect')
+          : null;
+      const safeRedirect =
+        redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/';
+      router.push(safeRedirect);
     },
     [router]
   );

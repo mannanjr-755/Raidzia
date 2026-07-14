@@ -9,7 +9,7 @@ router.get('/stats', auth_1.authenticate, (0, auth_1.authorize)('dashboard:read'
     try {
         const userId = req.user.userId;
         const currentYear = new Date().getFullYear();
-        const [totalProjects, activeProjects, completedProjects, upcomingProjects, revenueAgg, expenseAgg, bookings, soldUnits, availableUnits, pendingInstallments, employees, notifications, monthlyRevenue, monthlyExpenses, projectProgress, allInventory, expensesByCategory,] = await Promise.all([
+        const [totalProjects, activeProjects, completedProjects, upcomingProjects, revenueAgg, expenseAgg, bookings, soldUnits, availableUnits, pendingInstallments, employees, notifications, monthlyRevenue, monthlyExpenses, projectProgress, allInventory, expensesByCategory, feasibilityStudies, feasibilityRevenueAgg, feasibilityProfitData, recentFeasibilityStudies,] = await Promise.all([
             prisma_1.prisma.project.count({ where: { deletedAt: null } }),
             prisma_1.prisma.project.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
             prisma_1.prisma.project.count({ where: { deletedAt: null, status: 'COMPLETED' } }),
@@ -45,6 +45,30 @@ router.get('/stats', auth_1.authenticate, (0, auth_1.authorize)('dashboard:read'
                 where: { deletedAt: null },
                 _sum: { amount: true },
             }),
+            prisma_1.prisma.projectFeasibilityStudy.findMany({
+                where: { deletedAt: null },
+                include: { costs: true, revenues: true },
+            }),
+            prisma_1.prisma.projectFeasibilityStudy.aggregate({
+                where: { deletedAt: null },
+                _sum: {
+                    contractValue: true,
+                    variationOrders: true,
+                    additionalIncome: true,
+                    retentionRelease: true,
+                    otherRevenue: true,
+                },
+            }),
+            prisma_1.prisma.projectFeasibilityStudy.findMany({
+                where: { deletedAt: null },
+                include: { costs: true, revenues: true },
+            }),
+            prisma_1.prisma.projectFeasibilityStudy.findMany({
+                where: { deletedAt: null },
+                include: { costs: true, revenues: true },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+            }),
         ]);
         const revenue = (0, auth_2.toNum)(revenueAgg._sum.amount);
         const expenses = (0, auth_2.toNum)(expenseAgg._sum.amount);
@@ -61,6 +85,34 @@ router.get('/stats', auth_1.authenticate, (0, auth_1.authorize)('dashboard:read'
         });
         const lowStockCount = allInventory.filter((i) => (0, auth_2.toNum)(i.quantity) <= (0, auth_2.toNum)(i.minStock)).length;
         const categoryTotals = Object.fromEntries(expensesByCategory.map((row) => [row.category, (0, auth_2.toNum)(row._sum.amount)]));
+        const feasibilityComputed = feasibilityProfitData.map((study) => {
+            const baseRevenue = (0, auth_2.toNum)(study.contractValue) +
+                (0, auth_2.toNum)(study.variationOrders) +
+                (0, auth_2.toNum)(study.additionalIncome) +
+                (0, auth_2.toNum)(study.retentionRelease) +
+                (0, auth_2.toNum)(study.otherRevenue);
+            const dynamicRevenue = study.revenues.reduce((sum, item) => sum + (0, auth_2.toNum)(item.amount), 0);
+            const subtotalCost = study.costs.reduce((sum, item) => sum + (0, auth_2.toNum)(item.amount), 0);
+            const taxAmount = (subtotalCost * (0, auth_2.toNum)(study.taxPercentage)) / 100;
+            const contingencyAmount = (subtotalCost * (0, auth_2.toNum)(study.contingencyPercentage)) / 100;
+            const totalCost = subtotalCost + taxAmount + contingencyAmount;
+            const totalRevenue = baseRevenue + dynamicRevenue;
+            const netProfit = totalRevenue - totalCost;
+            const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+            return { netProfit, profitMargin };
+        });
+        const projectsInProfit = feasibilityComputed.filter((item) => item.netProfit > 0).length;
+        const projectsInLoss = feasibilityComputed.filter((item) => item.netProfit < 0).length;
+        const expectedProfit = feasibilityComputed.reduce((sum, item) => sum + item.netProfit, 0);
+        const averageProfitMargin = feasibilityComputed.length > 0
+            ? feasibilityComputed.reduce((sum, item) => sum + item.profitMargin, 0) / feasibilityComputed.length
+            : 0;
+        const expectedRevenue = (0, auth_2.toNum)(feasibilityRevenueAgg._sum.contractValue) +
+            (0, auth_2.toNum)(feasibilityRevenueAgg._sum.variationOrders) +
+            (0, auth_2.toNum)(feasibilityRevenueAgg._sum.additionalIncome) +
+            (0, auth_2.toNum)(feasibilityRevenueAgg._sum.retentionRelease) +
+            (0, auth_2.toNum)(feasibilityRevenueAgg._sum.otherRevenue) +
+            feasibilityStudies.reduce((sum, study) => sum + study.revenues.reduce((s, r) => s + (0, auth_2.toNum)(r.amount), 0), 0);
         res.json({
             success: true,
             data: {
@@ -83,6 +135,12 @@ router.get('/stats', auth_1.authenticate, (0, auth_1.authorize)('dashboard:read'
                     outstandingPayments: pendingInstallments,
                     employeeCount: employees,
                     lowStockAlerts: lowStockCount,
+                    numberOfFeasibilityStudies: feasibilityStudies.length,
+                    expectedRevenue,
+                    expectedProfit,
+                    projectsInProfit,
+                    projectsInLoss,
+                    averageProfitMargin,
                 },
                 chartData,
                 projectProgress: projectProgress.map((p) => ({
@@ -91,6 +149,12 @@ router.get('/stats', auth_1.authenticate, (0, auth_1.authorize)('dashboard:read'
                     status: p.status,
                 })),
                 notifications,
+                recentFeasibilityStudies: recentFeasibilityStudies.map((study) => ({
+                    id: study.id,
+                    projectName: study.projectName,
+                    projectType: study.projectType,
+                    createdAt: study.createdAt,
+                })),
             },
         });
     }

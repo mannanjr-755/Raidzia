@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
+import { getPagination, paginated } from '../lib/pagination';
 import {
   ensureUniqueCode,
   generateEmployeeCode,
@@ -26,12 +27,39 @@ const employeeSchema = z.object({
   joinDate: z.string().optional(),
 });
 
-router.get('/', authenticate, authorize('hr:read'), async (_req, res) => {
-  const items = await prisma.employee.findMany({
-    where: { deletedAt: null },
-    orderBy: { createdAt: 'desc' },
-  });
-  res.json({ success: true, data: items });
+router.get('/', authenticate, authorize('hr:read'), async (req, res) => {
+  const { page, limit, search, skip } = getPagination(req);
+  const department = String(req.query.department || '');
+
+  const where = {
+    deletedAt: null,
+    ...(department ? { department: { equals: department, mode: 'insensitive' as const } } : {}),
+    ...(search
+      ? {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' as const } },
+            { lastName: { contains: search, mode: 'insensitive' as const } },
+            { employeeCode: { contains: search, mode: 'insensitive' as const } },
+            { email: { contains: search, mode: 'insensitive' as const } },
+            { phone: { contains: search, mode: 'insensitive' as const } },
+            { department: { contains: search, mode: 'insensitive' as const } },
+            { designation: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.employee.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.employee.count({ where }),
+  ]);
+
+  res.json({ success: true, data: paginated(items, total, page, limit) });
 });
 
 router.post('/', authenticate, authorize('hr:write'), async (req, res) => {

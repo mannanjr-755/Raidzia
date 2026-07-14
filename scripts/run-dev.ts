@@ -65,6 +65,8 @@ function runSync(command: string, args: string[]) {
 }
 
 async function main() {
+  const API_PORT = parseInt(process.env.API_PORT || '4000', 10);
+
   if (!(await isPortOpen(POSTGRES_PORT))) {
     console.log('Starting embedded PostgreSQL...');
     postgresProcess = run(npxBin, ['tsx', 'scripts/start-postgres.ts']);
@@ -75,6 +77,11 @@ async function main() {
 
   console.log('Preparing database...');
   runSync(npxBin, ['tsx', 'scripts/ensure-db.ts']);
+
+  if (await isPortOpen(API_PORT)) {
+    console.log(`Port ${API_PORT} is already in use. Stop the existing API process, then retry.`);
+    throw new Error(`API port ${API_PORT} is already in use`);
+  }
 
   const webPort = await findFreePort(3000);
   const webOrigin = `http://localhost:${webPort}`;

@@ -9,6 +9,9 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
+// Must load before route modules so Router.prototype is patched in time.
+require('./lib/async-routes');
+
 import authRoutes from './routes/auth.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import projectRoutes from './routes/projects.routes';
@@ -16,9 +19,11 @@ import landRoutes from './routes/land.routes';
 import crmRoutes from './routes/crm.routes';
 import moduleRoutes from './routes/modules.routes';
 import hrRoutes from './routes/hr.routes';
-import machineryRoutes from './routes/machinery.routes';
-import inspectionRoutes from './routes/inspection.routes';
+import feasibilityRoutes from './routes/feasibility.routes';
+import propertiesRoutes from './routes/properties.routes';
+import reportsRoutes from './routes/reports.routes';
 import { prisma } from './lib/prisma';
+import { assertJwtSecretsConfigured } from './lib/auth';
 import { sendPrismaError } from './lib/route-utils';
 
 const app = express();
@@ -27,6 +32,10 @@ const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://1
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+if (process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 app.use(helmet());
 app.use(compression());
@@ -61,8 +70,9 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/land', landRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/hr', hrRoutes);
-app.use('/api/machinery', machineryRoutes);
-app.use('/api/inspection', inspectionRoutes);
+app.use('/api/feasibility', feasibilityRoutes);
+app.use('/api/properties', propertiesRoutes);
+app.use('/api/reports', reportsRoutes);
 app.use('/api', moduleRoutes);
 
 app.use((_req, res) => res.status(404).json({ success: false, message: 'Not found', error: 'Not found' }));
@@ -87,6 +97,13 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 async function start() {
+  try {
+    assertJwtSecretsConfigured();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+
   try {
     await prisma.$connect();
     console.log('Database connected');

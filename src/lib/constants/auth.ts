@@ -4,7 +4,6 @@ export const APP_DESCRIPTION = 'Professional financial management for modern bus
 
 export const ROUTES = {
   login: '/login',
-  forgotPassword: '/forgot-password',
   changePassword: '/change-password',
   dashboard: '/dashboard',
   accounts: '/dashboard/accounts',
@@ -29,7 +28,6 @@ export const AUTH_ERRORS = {
 } as const;
 
 export const AUTH_MESSAGES = {
-  resetEmailSent: 'A password reset link has been sent to your email.',
   passwordChanged: 'Your password has been updated successfully.',
   loginSuccess: 'Welcome back! Redirecting to your dashboard...',
 } as const;

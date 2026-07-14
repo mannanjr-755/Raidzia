@@ -90,6 +90,113 @@
   }
 }
 
+/* Progress bar */
+.progress-track {
+  @apply h-2 w-full overflow-hidden rounded-full bg-gray-200;
+}
+
+.progress-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+}
+
+.progress-fill-green {
+  @apply bg-emerald-500;
+}
+
+.progress-fill-blue {
+  @apply bg-blue-500;
+}
+
+.progress-fill-red {
+  @apply bg-red-400;
+}
+
+.progress-fill-gold {
+  background: linear-gradient(135deg, hsl(43 74% 55%) 0%, hsl(43 74% 42%) 100%);
+}
+
+/* Status badges */
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+}
+
+.badge-green {
+  @apply bg-emerald-50 text-emerald-700;
+}
+
+.badge-blue {
+  @apply bg-blue-50 text-blue-700;
+}
+
+.badge-red {
+  @apply bg-red-50 text-red-700;
+}
+
+.badge-yellow {
+  @apply bg-amber-50 text-amber-700;
+}
+
+.badge-gray {
+  @apply bg-gray-100 text-gray-600;
+}
+
+/* Project card */
+.project-card {
+  @apply luxury-card overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+}
+
+.project-card-header {
+  @apply border-b border-luxury-border px-5 py-4;
+}
+
+.project-card-body {
+  @apply px-5 py-4 space-y-4;
+}
+
+.project-card-footer {
+  @apply border-t border-luxury-border bg-gray-50/50 px-5 py-3;
+}
+
+/* Detail rows */
+.detail-row {
+  @apply flex items-center justify-between text-sm;
+}
+
+.detail-label {
+  @apply text-luxury-slate;
+}
+
+.detail-value {
+  @apply font-medium text-luxury-charcoal;
+}
+
+/* Summary card accent borders */
+.summary-card-blue::before {
+  content: '';
+  @apply absolute top-0 left-0 h-1 w-full bg-blue-500;
+}
+
+.summary-card-green::before {
+  content: '';
+  @apply absolute top-0 left-0 h-1 w-full bg-emerald-500;
+}
+
+.summary-card-red::before {
+  content: '';
+  @apply absolute top-0 left-0 h-1 w-full bg-red-500;
+}
+
+.summary-card-gold::before {
+  content: '';
+  @apply absolute top-0 left-0 h-1 w-full;
+  background: linear-gradient(135deg, hsl(43 74% 55%) 0%, hsl(43 74% 42%) 100%);
+}
+
+/* Sort select styling */
+.sort-select {
+  @apply luxury-input max-w-[180px] text-sm;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

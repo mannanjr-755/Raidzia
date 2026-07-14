@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
+import { getPagination, paginated } from '../lib/pagination';
 import { calculateFeasibility, mapFeasibilityToDb } from '../services/feasibility.service';
 import { ensureUniqueCode, generateLandId, normalizeCode, releaseCodeValue, sendPrismaError, validationError } from '../lib/route-utils';
 
@@ -34,24 +35,36 @@ const landSchema = z.object({
 });
 
 router.get('/', authenticate, authorize('land:read'), async (req, res) => {
-  const page = Math.max(1, parseInt(String(req.query.page || 1)));
-  const limit = Math.min(100, parseInt(String(req.query.limit || 10)));
-  const search = String(req.query.search || '');
+  const { page, limit, search, skip } = getPagination(req);
+  const status = String(req.query.status || '');
+  const landType = String(req.query.landType || '');
 
   const where = {
     deletedAt: null,
-    ...(search ? { OR: [{ title: { contains: search, mode: 'insensitive' as const } }, { landId: { contains: search, mode: 'insensitive' as const } }] } : {}),
+    ...(status ? { status: status as never } : {}),
+    ...(landType ? { landType: landType as never } : {}),
+    ...(search
+      ? {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' as const } },
+            { landId: { contains: search, mode: 'insensitive' as const } },
+            { location: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
   };
 
   const [items, total] = await Promise.all([
     prisma.landParcel.findMany({
-      where, skip: (page - 1) * limit, take: limit,
+      where,
+      skip,
+      take: limit,
       include: { negotiations: { orderBy: { createdAt: 'desc' }, take: 1 } },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.landParcel.count({ where }),
   ]);
-  res.json({ success: true, data: { items, total, page, limit, totalPages: Math.ceil(total / limit) } });
+  res.json({ success: true, data: paginated(items, total, page, limit) });
 });
 
 router.get('/next-id', authenticate, authorize('land:write'), async (_req, res) => {

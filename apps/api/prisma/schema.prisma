@@ -148,19 +148,12 @@ enum AttendanceStatus {
   LEAVE
 }
 
-enum MachineryStatus {
-  OPERATIONAL
-  MAINTENANCE
-  REPAIR
-  IDLE
-  RETIRED
-}
-
-enum InspectionStatus {
-  DRAFT
-  SUBMITTED
-  APPROVED
-  REJECTED
+enum FeasibilityOverallStatus {
+  HIGHLY_PROFITABLE
+  PROFITABLE
+  BREAK_EVEN
+  LOSS
+  ARCHIVED
 }
 
 enum NotificationType {
@@ -208,7 +201,6 @@ model User {
   leads           Lead[]          @relation("LeadAssignee")
   bookings        Booking[]       @relation("SalesAgent")
   expenses        Expense[]       @relation("ExpenseCreator")
-  inspections     Inspection[]
   attendances     Attendance[]
 }
 
@@ -263,7 +255,6 @@ model Project {
   tasks        ProjectTask[]
   progressLogs DailyProgress[]
   expenses     Expense[]
-  inspections  Inspection[]
 }
 
 model ProjectMilestone {
@@ -388,6 +379,55 @@ model FeasibilityStudy {
   isRecommended         Boolean      @default(false)
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
+}
+
+model ProjectFeasibilityStudy {
+  id                         String                   @id @default(cuid())
+  projectName                String
+  clientName                 String?
+  projectType                String
+  projectLocation            String
+  areaSqFt                   Decimal                  @default(0) @db.Decimal(14, 2)
+  areaSqM                    Decimal                  @default(0) @db.Decimal(14, 2)
+  projectDurationMonths      Int                      @default(0)
+  estimatedStartDate         DateTime?
+  estimatedCompletionDate    DateTime?
+  currency                   String                   @default("PKR")
+  taxPercentage              Decimal                  @default(0) @db.Decimal(8, 2)
+  contingencyPercentage      Decimal                  @default(0) @db.Decimal(8, 2)
+  expectedProfitMargin       Decimal                  @default(0) @db.Decimal(8, 2)
+  notes                      String?
+  contractValue              Decimal                  @default(0) @db.Decimal(15, 2)
+  variationOrders            Decimal                  @default(0) @db.Decimal(15, 2)
+  additionalIncome           Decimal                  @default(0) @db.Decimal(15, 2)
+  retentionRelease           Decimal                  @default(0) @db.Decimal(15, 2)
+  otherRevenue               Decimal                  @default(0) @db.Decimal(15, 2)
+  archivedAt                 DateTime?
+  deletedAt                  DateTime?
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+  costs                      FeasibilityCostItem[]
+  revenues                   FeasibilityRevenueItem[]
+}
+
+model FeasibilityCostItem {
+  id          String                  @id @default(cuid())
+  studyId     String
+  study       ProjectFeasibilityStudy @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  category    String
+  subCategory String?
+  amount      Decimal                 @default(0) @db.Decimal(15, 2)
+  isDirect    Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+}
+
+model FeasibilityRevenueItem {
+  id        String                  @id @default(cuid())
+  studyId   String
+  study     ProjectFeasibilityStudy @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  category  String
+  amount    Decimal                 @default(0) @db.Decimal(15, 2)
+  createdAt DateTime                @default(now())
 }
 
 // ==================== PROPERTIES ====================
@@ -707,66 +747,6 @@ model Attendance {
   createdAt  DateTime         @default(now())
 
   @@unique([employeeId, date])
-}
-
-// ==================== MACHINERY ====================
-
-model Machinery {
-  id              String          @id @default(cuid())
-  name            String
-  type            String
-  registrationNo  String?
-  status          MachineryStatus @default(OPERATIONAL)
-  purchaseDate    DateTime?
-  purchaseCost    Decimal?        @db.Decimal(15, 2)
-  operatorName    String?
-  fuelCapacity    Decimal?        @db.Decimal(8, 2)
-  lastMaintenance DateTime?
-  deletedAt       DateTime?
-  createdAt       DateTime        @default(now())
-
-  maintenanceLogs MaintenanceLog[]
-}
-
-model MaintenanceLog {
-  id          String    @id @default(cuid())
-  machineryId String
-  machinery   Machinery @relation(fields: [machineryId], references: [id], onDelete: Cascade)
-  type        String
-  description String
-  cost        Decimal   @default(0) @db.Decimal(12, 2)
-  date        DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-}
-
-// ==================== INSPECTION ====================
-
-model Inspection {
-  id          String           @id @default(cuid())
-  projectId   String
-  project     Project          @relation(fields: [projectId], references: [id])
-  inspectorId String?
-  inspector   User?            @relation(fields: [inspectorId], references: [id])
-  title       String
-  type        String           @default("QUALITY")
-  status      InspectionStatus @default(DRAFT)
-  date        DateTime         @default(now())
-  notes       String?
-  photos      String[]
-  gpsLat      Decimal?         @db.Decimal(10, 7)
-  gpsLng      Decimal?         @db.Decimal(10, 7)
-  createdAt   DateTime         @default(now())
-
-  checklistItems InspectionItem[]
-}
-
-model InspectionItem {
-  id           String     @id @default(cuid())
-  inspectionId String
-  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
-  item         String
-  isPassed     Boolean    @default(false)
-  notes        String?
 }
 
 // ==================== NOTIFICATIONS ====================

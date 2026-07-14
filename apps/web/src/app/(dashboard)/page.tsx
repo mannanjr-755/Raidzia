@@ -45,6 +45,12 @@ interface DashboardStats {
     outstandingPayments: number;
     employeeCount: number;
     lowStockAlerts: number;
+    numberOfFeasibilityStudies: number;
+    expectedRevenue: number;
+    expectedProfit: number;
+    projectsInProfit: number;
+    projectsInLoss: number;
+    averageProfitMargin: number;
   };
   chartData: { month: string; revenue: number; expenses: number; profit: number }[];
   projectProgress: { name: string; progress: number; status: string }[];
@@ -54,6 +60,12 @@ interface DashboardStats {
     message: string;
     type: string;
     isRead: boolean;
+    createdAt: string;
+  }[];
+  recentFeasibilityStudies: {
+    id: string;
+    projectName: string;
+    projectType: string;
     createdAt: string;
   }[];
 }
@@ -74,7 +86,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { stats, chartData, projectProgress, notifications } = data;
+  const { stats, chartData, projectProgress, notifications, recentFeasibilityStudies } = data;
 
   return (
     <div>
@@ -93,6 +105,10 @@ export default function DashboardPage() {
         <StatCard title="Units Available" value={formatNumber(stats.flatsAvailable)} icon={Package} />
         <StatCard title="Employees" value={formatNumber(stats.employeeCount)} icon={Users} />
         <StatCard title="Low Stock Alerts" value={formatNumber(stats.lowStockAlerts)} icon={AlertTriangle} />
+        <StatCard title="Feasibility Studies" value={formatNumber(stats.numberOfFeasibilityStudies)} icon={FolderKanban} />
+        <StatCard title="Expected Revenue" value={formatCurrency(stats.expectedRevenue)} icon={TrendingUp} />
+        <StatCard title="Expected Profit" value={formatCurrency(stats.expectedProfit)} icon={Wallet} />
+        <StatCard title="Avg Profit Margin" value={`${stats.averageProfitMargin.toFixed(2)}%`} icon={TrendingUp} trend={`${stats.projectsInProfit} profit / ${stats.projectsInLoss} loss`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -152,6 +168,22 @@ export default function DashboardPage() {
             <Bar dataKey="progress" fill="hsl(43 74% 49%)" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      <div className="luxury-card p-6 mt-6">
+        <h3 className="text-lg font-semibold text-luxury-charcoal mb-4">Recent Feasibility Studies</h3>
+        {recentFeasibilityStudies.length === 0 ? (
+          <p className="text-sm text-luxury-slate">No feasibility studies found.</p>
+        ) : (
+          <div className="space-y-3">
+            {recentFeasibilityStudies.map((study) => (
+              <div key={study.id} className="rounded-lg border border-luxury-border bg-luxury-cream/40 p-3">
+                <p className="font-medium text-luxury-charcoal">{study.projectName}</p>
+                <p className="text-xs text-luxury-slate">{study.projectType} • {formatDate(study.createdAt)}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

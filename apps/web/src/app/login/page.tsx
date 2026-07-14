@@ -1,11 +1,13 @@
 'use client';
 
+import { Suspense, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Building2, Lock, Mail } from 'lucide-react';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { ApiError } from '@/lib/api';
@@ -17,22 +19,29 @@ const loginSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
   const { login } = useAuth();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>({
+  } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: 'admin@rssbuilders.com', password: 'Admin@123' },
+    defaultValues: { email: '', password: '' },
   });
 
-  const onSubmit = async (data: LoginForm) => {
+  useEffect(() => {
+    if (searchParams.get('passwordChanged') === '1') {
+      toast.success('Your password has been changed successfully. Please sign in.');
+    }
+  }, [searchParams]);
+
+  const onSubmit = async (data: LoginFormValues) => {
     setLoading(true);
     try {
       await login(data.email, data.password);
@@ -147,6 +156,14 @@ export default function LoginPage() {
                 {errors.password && (
                   <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
                 )}
+                <div className="mt-2 flex justify-end">
+                  <Link
+                    href="/change-password"
+                    className="text-sm text-gold hover:text-gold-600 transition-colors"
+                  >
+                    Change Password
+                  </Link>
+                </div>
               </div>
 
               <button type="submit" className="btn-gold w-full" disabled={loading}>
@@ -162,5 +179,13 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-luxury-slate">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

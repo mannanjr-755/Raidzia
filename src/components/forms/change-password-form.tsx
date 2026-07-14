@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { AnimatePresence } from 'framer-motion';
-import { Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Lock, Eye, EyeOff } from 'lucide-react';
 import { changePasswordSchema, type ChangePasswordFormValues } from '@/lib/validation/schemas';
 import { authService } from '@/services/auth.service';
 import { ROUTES, AUTH_ERRORS } from '@/lib/constants/auth';
@@ -135,17 +135,14 @@ export function ChangePasswordForm() {
         register={register}
       />
 
-      <Button type="submit" className="w-full" size="lg" loading={isSubmitting} disabled={isSubmitting}>
-        {isSubmitting ? 'Updating...' : 'Update password'}
-      </Button>
-
-      <Link
-        href={ROUTES.login}
-        className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to sign in
-      </Link>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button type="submit" className="flex-1" size="lg" loading={isSubmitting} disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
+        </Button>
+        <Button type="button" variant="outline" className="flex-1" size="lg" asChild disabled={isSubmitting}>
+          <Link href={ROUTES.dashboard}>Cancel</Link>
+        </Button>
+      </div>
     </form>
   );
 }

@@ -1,7 +1,13 @@
 import { spawnSync } from 'child_process';
 import { spawn } from 'child_process';
 import net from 'net';
+import path from 'path';
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
+// Prefer the API workspace env for local embedded Postgres (root .env may point elsewhere).
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../apps/api/.env'), override: true });
 
 const POSTGRES_PORT = 5433;
 
@@ -43,6 +49,23 @@ function run(command: string, args: string[]) {
   }
 }
 
+function runWithRetry(command: string, args: string[], maxRetries = 3): void {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      run(command, args);
+      return;
+    } catch (e: unknown) {
+      const msg = (e as Error).message || '';
+      if (attempt === maxRetries || !msg.includes('starting up')) {
+        throw e;
+      }
+      console.log(`Command failed (attempt ${attempt}/${maxRetries}), retrying in 2s...`);
+      const end = Date.now() + 2000;
+      while (Date.now() < end) { /* sync wait */ }
+    }
+  }
+}
+
 async function main() {
   if (!(await isPortOpen(POSTGRES_PORT))) {
     console.log('Starting embedded PostgreSQL...');
@@ -56,9 +79,9 @@ async function main() {
     await waitForPort(POSTGRES_PORT, 'PostgreSQL');
   }
 
-  run('npm', ['run', 'db:create']);
+  runWithRetry('npm', ['run', 'db:create']);
   run('npm', ['run', 'db:generate', '--workspace=@rss/api']);
-  run('npm', ['run', 'db:push', '--workspace=@rss/api']);
+  runWithRetry('npm', ['run', 'db:push', '--workspace=@rss/api']);
 
   const prisma = new PrismaClient();
   try {

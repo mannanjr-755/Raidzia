@@ -48,10 +48,16 @@ function StatCard({ title, value, icon: Icon, trend }: { title: string; value: s
 export function DashboardHomeClient() {
   const [data, setData] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     apiFetch<DashboardStats>('/api/dashboard/stats').then((res) => {
-      if (res.success && res.data) setData(res.data);
+      if (res.success && res.data) {
+        setData(res.data);
+        setError(null);
+      } else {
+        setError(res.error || 'Failed to load dashboard data.');
+      }
       setLoading(false);
     });
   }, []);
@@ -66,7 +72,16 @@ export function DashboardHomeClient() {
     );
   }
 
-  if (!data) return <p className="text-muted-foreground">Failed to load dashboard data.</p>;
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="font-medium">Dashboard data could not be loaded.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{error || 'Please try again.'}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const { stats, chartData, accountBalances, recentInvoices, recentExpenses } = data;
 

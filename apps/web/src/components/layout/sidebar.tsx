@@ -3,7 +3,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
 import logo from '../../assets/logo.jpg';
 
 import {
@@ -17,12 +16,12 @@ import {
   Receipt,
   Package,
   UserCog,
-  Truck,
-  ClipboardCheck,
+  ClipboardList,
   Box,
   BarChart3,
   Bell,
   LogOut,
+  KeyRound,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -41,17 +40,20 @@ const navItems = [
   { href: '/expenses', label: 'Expenses', icon: Receipt },
   { href: '/inventory', label: 'Inventory', icon: Package },
   { href: '/hr', label: 'HR', icon: UserCog },
-  { href: '/machinery', label: 'Machinery', icon: Truck },
-  { href: '/inspection', label: 'Inspection', icon: ClipboardCheck },
+  { href: '/project-feasibility', label: 'Project Feasibility', icon: ClipboardList },
   { href: '/digital-twin', label: 'Digital Twin', icon: Box },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/notifications', label: 'Notifications', icon: Bell },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+}
+
+export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <motion.aside
@@ -115,6 +117,19 @@ export function Sidebar() {
           </div>
         )}
 
+        <Link
+          href="/change-password"
+          className={cn(
+            'sidebar-link w-full',
+            pathname.startsWith('/change-password') && 'sidebar-link-active',
+            collapsed && 'justify-center px-2'
+          )}
+          title={collapsed ? 'Change Password' : undefined}
+        >
+          <KeyRound className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Change Password</span>}
+        </Link>
+
         <button
           onClick={() => logout()}
           className={cn(
@@ -127,7 +142,7 @@ export function Sidebar() {
         </button>
 
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => onCollapsedChange(!collapsed)}
           className={cn(
             'sidebar-link w-full',
             collapsed && 'justify-center px-2'

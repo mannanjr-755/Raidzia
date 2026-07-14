@@ -36,6 +36,51 @@ export interface FeasibilityResult {
     aiSummary: string;
     isRecommended: boolean;
 }
+export interface ProjectFeasibilityCalcInput {
+    areaSqFt: number;
+    areaSqM: number;
+    projectDurationMonths: number;
+    taxPercentage: number;
+    contingencyPercentage: number;
+    expectedProfitMargin: number;
+    contractValue: number;
+    variationOrders: number;
+    additionalIncome: number;
+    retentionRelease: number;
+    otherRevenue: number;
+    costs: Array<{
+        amount: number;
+        isDirect: boolean;
+    }>;
+    revenues: Array<{
+        amount: number;
+    }>;
+    archivedAt?: Date | null;
+}
+export interface ProjectFeasibilityMetrics {
+    totalEstimatedRevenue: number;
+    totalDirectCost: number;
+    totalIndirectCost: number;
+    totalEstimatedCost: number;
+    grossProfit: number;
+    netProfit: number;
+    profitPercentage: number;
+    profitMargin: number;
+    taxAmount: number;
+    contingencyAmount: number;
+    cashRequirement: number;
+    monthlyCost: number;
+    monthlyRevenue: number;
+    breakEvenPoint: number;
+    roi: number;
+    netCashFlow: number;
+    projectedProfit: number;
+    projectedLoss: number;
+    costPerSqFt: number;
+    costPerSqM: number;
+    overallStatus: 'HIGHLY_PROFITABLE' | 'PROFITABLE' | 'BREAK_EVEN' | 'LOSS' | 'ARCHIVED';
+}
+export declare function calculateProjectFeasibility(input: ProjectFeasibilityCalcInput): ProjectFeasibilityMetrics;
 export declare function calculateFeasibility(input: FeasibilityInput): FeasibilityResult;
 export declare function mapFeasibilityToDb(input: FeasibilityInput, result: FeasibilityResult, landParcelId: string, title: string, buildingType: 'RESIDENTIAL' | 'COMMERCIAL' | 'MIXED_USE'): {
     landParcelId: string;

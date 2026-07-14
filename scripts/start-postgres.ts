@@ -42,7 +42,19 @@ async function main() {
 
   await pg.start();
   for (let i = 0; i < 30; i++) { if (await isPortOpen(PORT)) break; await new Promise((r) => setTimeout(r, 500)); }
-  try { await pg.createDatabase(DATABASE); } catch { /* exists */ }
+
+  for (let attempt = 1; attempt <= 15; attempt++) {
+    try {
+      await pg.createDatabase(DATABASE);
+      break;
+    } catch (e: unknown) {
+      const msg = (e as Error).message || '';
+      if (msg.includes('already exists')) break;
+      if (attempt === 15) throw e;
+      console.log(`Waiting for PostgreSQL to accept connections (attempt ${attempt}/15)...`);
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
 
   console.log(`RSS ERP PostgreSQL ready on port ${PORT}`);
   process.on('SIGINT', async () => { await pg.stop(); process.exit(0); });

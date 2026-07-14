@@ -1,8 +1,6 @@
 import type {
   LoginCredentials,
   LoginResult,
-  ForgotPasswordRequest,
-  ForgotPasswordResult,
   ChangePasswordRequest,
   ChangePasswordResult,
   ApiResponse,
@@ -57,22 +55,6 @@ class AuthService {
 
   async logout(): Promise<ApiResponse> {
     return this.request('/logout', { method: 'POST' });
-  }
-
-  async forgotPassword(data: ForgotPasswordRequest): Promise<ForgotPasswordResult> {
-    const result = await this.request('/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-
-    if (!result.success) {
-      return { success: false, message: '', error: result.error };
-    }
-
-    return {
-      success: true,
-      message: result.message || AUTH_MESSAGES.resetEmailSent,
-    };
   }
 
   async changePassword(data: ChangePasswordRequest): Promise<ChangePasswordResult> {

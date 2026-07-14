@@ -33,16 +33,6 @@ export interface LoginResult {
   user?: AuthUser;
 }
 
-export interface ForgotPasswordRequest {
-  email: string;
-}
-
-export interface ForgotPasswordResult {
-  success: boolean;
-  message: string;
-  error?: string;
-}
-
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;

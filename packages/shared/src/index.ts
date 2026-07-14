@@ -27,8 +27,7 @@ export type Permission =
   | 'procurement:read' | 'procurement:write'
   | 'inventory:read' | 'inventory:write'
   | 'hr:read' | 'hr:write'
-  | 'machinery:read' | 'machinery:write'
-  | 'inspection:read' | 'inspection:write'
+  | 'feasibility:read' | 'feasibility:write' | 'feasibility:delete' | 'feasibility:export'
   | 'reports:read' | 'reports:export'
   | 'notifications:read'
   | 'digital-twin:read'
@@ -45,8 +44,8 @@ const ALL: Permission[] = [
   'expenses:read', 'expenses:write', 'expenses:delete',
   'procurement:read', 'procurement:write',
   'inventory:read', 'inventory:write',
-  'hr:read', 'hr:write', 'machinery:read', 'machinery:write',
-  'inspection:read', 'inspection:write',
+  'hr:read', 'hr:write',
+  'feasibility:read', 'feasibility:write', 'feasibility:delete', 'feasibility:export',
   'reports:read', 'reports:export', 'notifications:read',
   'digital-twin:read', 'users:read', 'users:write', 'settings:read', 'settings:write',
 ];
@@ -58,12 +57,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.PROJECT_MANAGER]: [
     'dashboard:read', 'projects:read', 'projects:write',
     'land:read', 'land:feasibility', 'properties:read',
-    'expenses:read', 'expenses:write', 'inspection:read', 'inspection:write',
-    'machinery:read', 'reports:read', 'notifications:read', 'digital-twin:read',
+    'expenses:read', 'expenses:write',
+    'feasibility:read', 'feasibility:write', 'feasibility:export',
+    'reports:read', 'notifications:read', 'digital-twin:read',
   ],
   [UserRole.SITE_ENGINEER]: [
-    'dashboard:read', 'projects:read', 'inspection:read', 'inspection:write',
-    'machinery:read', 'inventory:read', 'notifications:read', 'digital-twin:read',
+    'dashboard:read', 'projects:read', 'inventory:read', 'notifications:read', 'digital-twin:read',
   ],
   [UserRole.ARCHITECT]: [
     'dashboard:read', 'projects:read', 'land:read', 'properties:read', 'properties:write',
@@ -72,11 +71,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.QUANTITY_SURVEYOR]: [
     'dashboard:read', 'projects:read', 'land:read', 'land:feasibility',
     'procurement:read', 'inventory:read', 'reports:read', 'notifications:read',
+    'feasibility:read', 'feasibility:write',
   ],
   [UserRole.ACCOUNTS]: [
     'dashboard:read', 'accounting:read', 'accounting:write',
     'expenses:read', 'expenses:write', 'sales:read', 'procurement:read',
     'reports:read', 'reports:export', 'notifications:read',
+    'feasibility:read', 'feasibility:export',
   ],
   [UserRole.HR]: [
     'dashboard:read', 'hr:read', 'hr:write', 'reports:read', 'notifications:read',

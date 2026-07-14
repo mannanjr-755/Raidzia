@@ -4,12 +4,34 @@ export async function apiFetch<T>(
   url: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
-  const res = await fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-  });
-  return res.json() as Promise<ApiResponse<T>>;
+  try {
+    const res = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+    });
+
+    const text = await res.text();
+    const data = text ? (JSON.parse(text) as ApiResponse<T>) : null;
+
+    if (!data) {
+      return { success: false, error: `Empty response from API (${res.status})` };
+    }
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.error || data.message || `Request failed (${res.status})`,
+      };
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to reach the API',
+    };
+  }
 }
 
 export async function fetchPaginated<T>(

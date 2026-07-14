@@ -6,19 +6,25 @@ export const loginSchema = z.object({
   rememberMe: z.boolean().optional().default(false),
 });
 
-export const forgotPasswordSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
-});
-
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+    newPassword: z
+      .string()
+      .min(8, 'New password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Include at least one uppercase letter')
+      .regex(/[a-z]/, 'Include at least one lowercase letter')
+      .regex(/[0-9]/, 'Include at least one number')
+      .regex(/[^A-Za-z0-9]/, 'Include at least one special character'),
     confirmPassword: z.string().min(1, 'Please confirm your new password'),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
+  })
+  .refine((d) => d.currentPassword !== d.newPassword, {
+    message: 'New password must be different from your current password',
+    path: ['newPassword'],
   });
 
 export const accountSchema = z.object({
@@ -87,7 +93,6 @@ export const transactionSchema = z.object({
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
-export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 export type AccountFormValues = z.infer<typeof accountSchema>;
 export type CustomerFormValues = z.infer<typeof customerSchema>;

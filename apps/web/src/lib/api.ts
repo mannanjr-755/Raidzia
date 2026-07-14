@@ -37,7 +37,8 @@ export interface PaginatedResponse<T> {
 
 function setTokenCookie(token: string) {
   if (typeof document !== 'undefined') {
-    document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax${secure}`;
   }
 }
 
@@ -211,6 +212,12 @@ export const api = {
       true,
       false
     ),
+
+  changePassword: (currentPassword: string, newPassword: string, confirmPassword: string) =>
+    request<{ requireReauth: boolean }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+    }),
 
   logout: async () => {
     const refreshToken = getRefreshToken();

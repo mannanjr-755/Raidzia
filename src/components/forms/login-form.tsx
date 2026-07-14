@@ -129,26 +129,16 @@ export function LoginForm() {
           </Label>
         </div>
         <Link
-          href={ROUTES.forgotPassword}
+          href={ROUTES.changePassword}
           className="text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
         >
-          Forgot password?
+          Change Password
         </Link>
       </div>
 
       <Button type="submit" className="w-full" size="lg" loading={isSubmitting} disabled={isSubmitting}>
         {isSubmitting ? 'Signing in...' : 'Sign in'}
       </Button>
-
-      <p className="text-center text-sm text-muted-foreground">
-        Need to update your password?{' '}
-        <Link
-          href={ROUTES.changePassword}
-          className="text-primary hover:underline font-medium"
-        >
-          Change password
-        </Link>
-      </p>
     </form>
   );
 }

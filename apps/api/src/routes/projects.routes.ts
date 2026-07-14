@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
+import { getPagination, paginated } from '../lib/pagination';
 import {
   ensureUniqueCode,
   generateProjectCode,
@@ -32,10 +33,8 @@ const projectSchema = z.object({
 });
 
 router.get('/', authenticate, authorize('projects:read'), async (req, res) => {
-  const page = Math.max(1, parseInt(String(req.query.page || 1)));
-  const limit = Math.min(100, parseInt(String(req.query.limit || 10)));
-  const search = String(req.query.search || '');
-  const status = req.query.status as string | undefined;
+  const { page, limit, search, skip } = getPagination(req);
+  const status = String(req.query.status || '');
 
   const where = {
     deletedAt: null,
@@ -45,6 +44,7 @@ router.get('/', authenticate, authorize('projects:read'), async (req, res) => {
           OR: [
             { name: { contains: search, mode: 'insensitive' as const } },
             { code: { contains: search, mode: 'insensitive' as const } },
+            { location: { contains: search, mode: 'insensitive' as const } },
           ],
         }
       : {}),
@@ -53,7 +53,7 @@ router.get('/', authenticate, authorize('projects:read'), async (req, res) => {
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where,
-      skip: (page - 1) * limit,
+      skip,
       take: limit,
       include: { manager: { select: { firstName: true, lastName: true } }, landParcel: { select: { title: true } } },
       orderBy: { createdAt: 'desc' },
@@ -61,7 +61,7 @@ router.get('/', authenticate, authorize('projects:read'), async (req, res) => {
     prisma.project.count({ where }),
   ]);
 
-  res.json({ success: true, data: { items, total, page, limit, totalPages: Math.ceil(total / limit) } });
+  res.json({ success: true, data: paginated(items, total, page, limit) });
 });
 
 router.get('/next-code', authenticate, authorize('projects:write'), async (_req, res) => {

@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { api, type PaginatedResponse } from '@/lib/api';
-import { PageHeader, LoadingSpinner } from '@/components/ui/stat-card';
+import { PageHeader, LoadingSpinner, EmptyState } from '@/components/ui/stat-card';
+import { ListToolbar } from '@/components/ui/list-controls';
 import { cn } from '@/lib/utils';
 
 interface Project {
   id: string;
   name: string;
   code: string;
+  status?: string;
+  location?: string;
 }
 
 interface Unit {
@@ -32,6 +36,8 @@ interface Building {
   name: string;
   floors: Floor[];
 }
+
+const UNIT_STATUSES = ['AVAILABLE', 'RESERVED', 'SOLD', 'UNDER_CONSTRUCTION'] as const;
 
 const unitStatusColors: Record<string, { bg: string; border: string; label: string }> = {
   SOLD: { bg: 'bg-green-500', border: 'border-green-600', label: 'Sold' },
@@ -66,8 +72,26 @@ function UnitCell({ unit }: { unit: Unit }) {
   );
 }
 
-function BuildingViewer({ building }: { building: Building }) {
-  const sortedFloors = [...building.floors].sort((a, b) => b.number - a.number);
+function BuildingViewer({
+  building,
+  unitStatusFilter,
+}: {
+  building: Building;
+  unitStatusFilter: string;
+}) {
+  const sortedFloors = [...building.floors]
+    .sort((a, b) => b.number - a.number)
+    .map((floor) => ({
+      ...floor,
+      units: unitStatusFilter
+        ? floor.units.filter((u) => {
+            if (unitStatusFilter === 'RESERVED') {
+              return u.status === 'RESERVED' || u.status === 'BOOKED';
+            }
+            return u.status === unitStatusFilter;
+          })
+        : floor.units,
+    }));
 
   return (
     <div className="luxury-card p-6">
@@ -85,7 +109,9 @@ function BuildingViewer({ building }: { building: Building }) {
             </div>
             <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 p-3 rounded-lg bg-luxury-cream border border-luxury-border">
               {floor.units.length === 0 ? (
-                <span className="text-xs text-luxury-slate col-span-full text-center py-2">No units</span>
+                <span className="text-xs text-luxury-slate col-span-full text-center py-2">
+                  {unitStatusFilter ? 'No matching units' : 'No units'}
+                </span>
               ) : (
                 floor.units.map((unit) => <UnitCell key={unit.id} unit={unit} />)
               )}
@@ -101,18 +127,38 @@ function BuildingViewer({ building }: { building: Building }) {
 }
 
 export default function DigitalTwinPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [unitStatusFilter, setUnitStatusFilter] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects-list'],
     queryFn: () => api.get<PaginatedResponse<Project>>('/projects?limit=100'),
   });
 
+  const filteredProjects = useMemo(() => {
+    const items = projects?.items || [];
+    const q = search.trim().toLowerCase();
+    return items.filter((p) => {
+      const matchesSearch =
+        !q ||
+        p.name.toLowerCase().includes(q) ||
+        p.code.toLowerCase().includes(q) ||
+        (p.location || '').toLowerCase().includes(q);
+      const matchesStatus = !statusFilter || p.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [projects?.items, search, statusFilter]);
+
   const { data: buildings, isLoading: buildingsLoading } = useQuery({
     queryKey: ['digital-twin', selectedProjectId],
     queryFn: () => api.get<Building[]>(`/properties/digital-twin/${selectedProjectId}`),
     enabled: !!selectedProjectId,
   });
+
+  const selectedProject = filteredProjects.find((p) => p.id === selectedProjectId)
+    || projects?.items.find((p) => p.id === selectedProjectId);
 
   return (
     <div>
@@ -121,8 +167,47 @@ export default function DigitalTwinPage() {
         description="Interactive building visualization with unit status"
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <div className="min-w-[240px]">
+      <div className="mb-4 luxury-card p-4 text-sm text-luxury-slate">
+        Digital Twin is a read-only viewer. To add or edit buildings, floors, and units, use the{' '}
+        <Link href="/properties" className="text-gold hover:underline font-medium">
+          Properties
+        </Link>{' '}
+        module.
+      </div>
+
+      <ListToolbar
+        search={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setSelectedProjectId('');
+        }}
+        searchPlaceholder="Search projects by name, code, or location..."
+        filters={[
+          {
+            key: 'status',
+            label: 'All project statuses',
+            value: statusFilter,
+            onChange: (v) => {
+              setStatusFilter(v);
+              setSelectedProjectId('');
+            },
+            options: ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'].map((s) => ({
+              label: s,
+              value: s,
+            })),
+          },
+          {
+            key: 'unitStatus',
+            label: 'All unit statuses',
+            value: unitStatusFilter,
+            onChange: setUnitStatusFilter,
+            options: UNIT_STATUSES.map((s) => ({ label: s, value: s })),
+          },
+        ]}
+      />
+
+      <div className="mb-6 flex flex-wrap items-end gap-4">
+        <div className="min-w-[280px] flex-1 max-w-md">
           <label className="block text-sm font-medium mb-1.5">Select Project</label>
           <select
             className="luxury-input"
@@ -131,36 +216,51 @@ export default function DigitalTwinPage() {
             disabled={projectsLoading}
           >
             <option value="">Choose a project...</option>
-            {projects?.items.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+            {filteredProjects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.code})
+              </option>
             ))}
           </select>
+          {!projectsLoading && filteredProjects.length === 0 && (
+            <p className="text-xs text-luxury-slate mt-1">No projects match your search/filters.</p>
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-3 mt-6">
-          {Object.entries(unitStatusColors).filter(([k]) => k !== 'BOOKED' && k !== 'TRANSFERRED').map(([status, style]) => (
-            <div key={status} className="flex items-center gap-2 text-xs">
-              <div className={cn('h-4 w-4 rounded border-2', style.bg, style.border)} />
-              <span className="text-luxury-slate">{style.label}</span>
-            </div>
-          ))}
+        <div className="flex flex-wrap gap-3 pb-1">
+          {Object.entries(unitStatusColors)
+            .filter(([k]) => k !== 'BOOKED' && k !== 'TRANSFERRED')
+            .map(([status, style]) => (
+              <div key={status} className="flex items-center gap-2 text-xs">
+                <div className={cn('h-4 w-4 rounded border-2', style.bg, style.border)} />
+                <span className="text-luxury-slate">{style.label}</span>
+              </div>
+            ))}
         </div>
       </div>
 
+      {selectedProject && (
+        <p className="mb-4 text-sm text-luxury-slate">
+          Viewing <span className="font-medium text-luxury-charcoal">{selectedProject.name}</span>
+          {selectedProject.status ? ` · ${selectedProject.status}` : ''}
+          {selectedProject.location ? ` · ${selectedProject.location}` : ''}
+        </p>
+      )}
+
       {!selectedProjectId ? (
-        <div className="luxury-card p-16 text-center">
-          <p className="text-luxury-slate">Select a project to view the digital twin</p>
-        </div>
+        <EmptyState message="Select a project to view the digital twin." />
       ) : buildingsLoading ? (
         <LoadingSpinner />
       ) : !buildings?.length ? (
-        <div className="luxury-card p-16 text-center">
-          <p className="text-luxury-slate">No buildings found for this project</p>
-        </div>
+        <EmptyState message="No buildings found for this project." />
       ) : (
         <div className="space-y-6">
           {buildings.map((building) => (
-            <BuildingViewer key={building.id} building={building} />
+            <BuildingViewer
+              key={building.id}
+              building={building}
+              unitStatusFilter={unitStatusFilter}
+            />
           ))}
         </div>
       )}

@@ -1,7 +1,17 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { toNum } from '../lib/auth';
 
-export async function generateInstallments(bookingId: string, totalAmount: number, downPayment: number, count: number, startDate: Date) {
+type DbClient = Prisma.TransactionClient | typeof prisma;
+
+export async function generateInstallments(
+  bookingId: string,
+  totalAmount: number,
+  downPayment: number,
+  count: number,
+  startDate: Date,
+  db: DbClient = prisma
+) {
   const remaining = totalAmount - downPayment;
   const installmentAmount = remaining / count;
   const installments = [];
@@ -12,7 +22,7 @@ export async function generateInstallments(bookingId: string, totalAmount: numbe
       bookingId, number: i, amount: installmentAmount, dueDate,
     });
   }
-  await prisma.installment.createMany({ data: installments });
+  await db.installment.createMany({ data: installments });
   return installments;
 }
 
@@ -35,7 +45,8 @@ export async function confirmBooking(bookingId: string, userId: string) {
         toNum(booking.totalAmount),
         toNum(booking.downPayment),
         12,
-        new Date()
+        new Date(),
+        tx
       );
     }
 

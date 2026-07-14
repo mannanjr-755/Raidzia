@@ -29,6 +29,10 @@ router.get('/stats', authenticate, authorize('dashboard:read'), async (req, res)
       projectProgress,
       allInventory,
       expensesByCategory,
+      feasibilityStudies,
+      feasibilityRevenueAgg,
+      feasibilityProfitData,
+      recentFeasibilityStudies,
     ] = await Promise.all([
       prisma.project.count({ where: { deletedAt: null } }),
       prisma.project.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
@@ -65,6 +69,30 @@ router.get('/stats', authenticate, authorize('dashboard:read'), async (req, res)
         where: { deletedAt: null },
         _sum: { amount: true },
       }),
+      prisma.projectFeasibilityStudy.findMany({
+        where: { deletedAt: null },
+        include: { costs: true, revenues: true },
+      }),
+      prisma.projectFeasibilityStudy.aggregate({
+        where: { deletedAt: null },
+        _sum: {
+          contractValue: true,
+          variationOrders: true,
+          additionalIncome: true,
+          retentionRelease: true,
+          otherRevenue: true,
+        },
+      }),
+      prisma.projectFeasibilityStudy.findMany({
+        where: { deletedAt: null },
+        include: { costs: true, revenues: true },
+      }),
+      prisma.projectFeasibilityStudy.findMany({
+        where: { deletedAt: null },
+        include: { costs: true, revenues: true },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
     ]);
 
     const revenue = toNum(revenueAgg._sum.amount);
@@ -87,6 +115,37 @@ router.get('/stats', authenticate, authorize('dashboard:read'), async (req, res)
     const categoryTotals = Object.fromEntries(
       expensesByCategory.map((row) => [row.category, toNum(row._sum.amount)])
     );
+    const feasibilityComputed = feasibilityProfitData.map((study) => {
+      const baseRevenue =
+        toNum(study.contractValue) +
+        toNum(study.variationOrders) +
+        toNum(study.additionalIncome) +
+        toNum(study.retentionRelease) +
+        toNum(study.otherRevenue);
+      const dynamicRevenue = study.revenues.reduce((sum, item) => sum + toNum(item.amount), 0);
+      const subtotalCost = study.costs.reduce((sum, item) => sum + toNum(item.amount), 0);
+      const taxAmount = (subtotalCost * toNum(study.taxPercentage)) / 100;
+      const contingencyAmount = (subtotalCost * toNum(study.contingencyPercentage)) / 100;
+      const totalCost = subtotalCost + taxAmount + contingencyAmount;
+      const totalRevenue = baseRevenue + dynamicRevenue;
+      const netProfit = totalRevenue - totalCost;
+      const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+      return { netProfit, profitMargin };
+    });
+    const projectsInProfit = feasibilityComputed.filter((item) => item.netProfit > 0).length;
+    const projectsInLoss = feasibilityComputed.filter((item) => item.netProfit < 0).length;
+    const expectedProfit = feasibilityComputed.reduce((sum, item) => sum + item.netProfit, 0);
+    const averageProfitMargin =
+      feasibilityComputed.length > 0
+        ? feasibilityComputed.reduce((sum, item) => sum + item.profitMargin, 0) / feasibilityComputed.length
+        : 0;
+    const expectedRevenue =
+      toNum(feasibilityRevenueAgg._sum.contractValue) +
+      toNum(feasibilityRevenueAgg._sum.variationOrders) +
+      toNum(feasibilityRevenueAgg._sum.additionalIncome) +
+      toNum(feasibilityRevenueAgg._sum.retentionRelease) +
+      toNum(feasibilityRevenueAgg._sum.otherRevenue) +
+      feasibilityStudies.reduce((sum, study) => sum + study.revenues.reduce((s, r) => s + toNum(r.amount), 0), 0);
 
     res.json({
       success: true,
@@ -110,6 +169,12 @@ router.get('/stats', authenticate, authorize('dashboard:read'), async (req, res)
           outstandingPayments: pendingInstallments,
           employeeCount: employees,
           lowStockAlerts: lowStockCount,
+          numberOfFeasibilityStudies: feasibilityStudies.length,
+          expectedRevenue,
+          expectedProfit,
+          projectsInProfit,
+          projectsInLoss,
+          averageProfitMargin,
         },
         chartData,
         projectProgress: projectProgress.map((p) => ({
@@ -118,6 +183,12 @@ router.get('/stats', authenticate, authorize('dashboard:read'), async (req, res)
           status: p.status,
         })),
         notifications,
+        recentFeasibilityStudies: recentFeasibilityStudies.map((study) => ({
+          id: study.id,
+          projectName: study.projectName,
+          projectType: study.projectType,
+          createdAt: study.createdAt,
+        })),
       },
     });
   } catch (e) {

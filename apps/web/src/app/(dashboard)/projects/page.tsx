@@ -5,13 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, type PaginatedResponse } from '@/lib/api';
 import { invalidateAfterMutation } from '@/lib/invalidate-dashboard';
 import { formatCurrency } from '@/lib/utils';
 import { PageHeader, LoadingSpinner, EmptyState } from '@/components/ui/stat-card';
 import { Modal, ConfirmDialog } from '@/components/ui/modal';
+import { ListToolbar, PaginationBar } from '@/components/ui/list-controls';
+import { useListParams } from '@/hooks/use-list-params';
 
 interface Project {
   id: string;
@@ -27,9 +29,6 @@ interface Project {
   completionPct: number | string;
   startDate?: string;
   endDate?: string;
-  createdAt: string;
-  manager?: { firstName: string; lastName: string };
-  landParcel?: { title: string };
 }
 
 const projectSchema = z.object({
@@ -59,15 +58,14 @@ const statusColors: Record<string, string> = {
 
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  const list = useListParams(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['projects', search],
-    queryFn: () =>
-      api.get<PaginatedResponse<Project>>(`/projects?search=${encodeURIComponent(search)}&limit=50`),
+    queryKey: ['projects', list.queryString],
+    queryFn: () => api.get<PaginatedResponse<Project>>(`/projects?${list.queryString}`),
   });
 
   const {
@@ -91,8 +89,7 @@ export default function ProjectsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: ProjectForm }) =>
-      api.put<Project>(`/projects/${id}`, body),
+    mutationFn: ({ id, body }: { id: string; body: ProjectForm }) => api.put<Project>(`/projects/${id}`, body),
     onSuccess: () => {
       invalidateAfterMutation(queryClient, ['projects']);
       toast.success('Project updated');
@@ -147,39 +144,41 @@ export default function ProjectsPage() {
   };
 
   const onSubmit = (form: ProjectForm) => {
-    if (editing) {
-      updateMutation.mutate({ id: editing.id, body: form });
-    } else {
-      createMutation.mutate(form);
-    }
+    if (editing) updateMutation.mutate({ id: editing.id, body: form });
+    else createMutation.mutate(form);
   };
 
   return (
     <div>
-      <PageHeader
-        title="Projects"
-        description="Manage construction projects"
+      <PageHeader title="Projects" description="Manage construction projects" />
+
+      <ListToolbar
+        search={list.search}
+        onSearchChange={list.setSearch}
+        searchPlaceholder="Search by code or name..."
+        filters={[
+          {
+            key: 'status',
+            label: 'All statuses',
+            value: list.filters.status || '',
+            onChange: (v) => list.setFilter('status', v),
+            options: ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'].map((s) => ({
+              label: s,
+              value: s,
+            })),
+          },
+        ]}
         action={
           <button className="btn-gold" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> New Project
+            <Plus className="h-4 w-4" /> Add Project
           </button>
         }
       />
 
-      <div className="mb-6 relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-luxury-slate" />
-        <input
-          className="luxury-input pl-10"
-          placeholder="Search projects..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
       {isLoading ? (
         <LoadingSpinner />
       ) : !data?.items.length ? (
-        <EmptyState message="No projects found. Create your first project." />
+        <EmptyState message="No projects found." />
       ) : (
         <div className="luxury-card overflow-hidden">
           <div className="overflow-x-auto">
@@ -207,17 +206,7 @@ export default function ProjectsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">{formatCurrency(Number(p.budget))}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-16 rounded-full bg-luxury-cream overflow-hidden">
-                          <div
-                            className="h-full bg-gold rounded-full"
-                            style={{ width: `${Number(p.completionPct)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs">{Number(p.completionPct)}%</span>
-                      </div>
-                    </td>
+                    <td className="px-4 py-3">{Number(p.completionPct)}%</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <button className="btn-outline !px-2 !py-1.5" onClick={() => openEdit(p)}>
@@ -236,17 +225,22 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      <Modal
-        open={modalOpen}
-        onClose={closeModal}
-        title={editing ? 'Edit Project' : 'New Project'}
-        className="max-w-2xl"
-      >
+      {data && (
+        <PaginationBar
+          page={data.page}
+          totalPages={data.totalPages}
+          total={data.total}
+          limit={data.limit}
+          onPageChange={list.setPage}
+        />
+      )}
+
+      <Modal open={modalOpen} onClose={closeModal} title={editing ? 'Edit Project' : 'Add Project'} className="max-w-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Code</label>
-              <input {...register('code')} className="luxury-input" placeholder="Auto-generated if left blank" />
+              <input {...register('code')} className="luxury-input" placeholder="Auto-generated if blank" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Name</label>
@@ -301,12 +295,8 @@ export default function ProjectsPage() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" className="btn-outline" onClick={closeModal}>Cancel</button>
-            <button
-              type="submit"
-              className="btn-gold"
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editing ? 'Update' : 'Create'}
+            <button type="submit" className="btn-gold" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editing ? 'Update' : 'Add'}
             </button>
           </div>
         </form>
@@ -317,7 +307,7 @@ export default function ProjectsPage() {
         onClose={() => setDeleteId(null)}
         onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         title="Delete Project"
-        message="Are you sure you want to delete this project? This action cannot be undone."
+        message="Are you sure you want to delete this project?"
         confirmLabel="Delete"
         variant="danger"
         loading={deleteMutation.isPending}

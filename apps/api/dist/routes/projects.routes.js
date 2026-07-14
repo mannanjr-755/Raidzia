@@ -4,6 +4,7 @@ const express_1 = require("express");
 const zod_1 = require("zod");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
+const pagination_1 = require("../lib/pagination");
 const route_utils_1 = require("../lib/route-utils");
 const router = (0, express_1.Router)();
 const param = (value) => (Array.isArray(value) ? value[0] : String(value || ''));
@@ -24,10 +25,8 @@ const projectSchema = zod_1.z.object({
     landParcelId: zod_1.z.string().optional().nullable(),
 });
 router.get('/', auth_1.authenticate, (0, auth_1.authorize)('projects:read'), async (req, res) => {
-    const page = Math.max(1, parseInt(String(req.query.page || 1)));
-    const limit = Math.min(100, parseInt(String(req.query.limit || 10)));
-    const search = String(req.query.search || '');
-    const status = req.query.status;
+    const { page, limit, search, skip } = (0, pagination_1.getPagination)(req);
+    const status = String(req.query.status || '');
     const where = {
         deletedAt: null,
         ...(status ? { status: status } : {}),
@@ -36,6 +35,7 @@ router.get('/', auth_1.authenticate, (0, auth_1.authorize)('projects:read'), asy
                 OR: [
                     { name: { contains: search, mode: 'insensitive' } },
                     { code: { contains: search, mode: 'insensitive' } },
+                    { location: { contains: search, mode: 'insensitive' } },
                 ],
             }
             : {}),
@@ -43,14 +43,14 @@ router.get('/', auth_1.authenticate, (0, auth_1.authorize)('projects:read'), asy
     const [items, total] = await Promise.all([
         prisma_1.prisma.project.findMany({
             where,
-            skip: (page - 1) * limit,
+            skip,
             take: limit,
             include: { manager: { select: { firstName: true, lastName: true } }, landParcel: { select: { title: true } } },
             orderBy: { createdAt: 'desc' },
         }),
         prisma_1.prisma.project.count({ where }),
     ]);
-    res.json({ success: true, data: { items, total, page, limit, totalPages: Math.ceil(total / limit) } });
+    res.json({ success: true, data: (0, pagination_1.paginated)(items, total, page, limit) });
 });
 router.get('/next-code', auth_1.authenticate, (0, auth_1.authorize)('projects:write'), async (_req, res) => {
     try {

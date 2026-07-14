@@ -4,6 +4,7 @@ const express_1 = require("express");
 const zod_1 = require("zod");
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../middleware/auth");
+const pagination_1 = require("../lib/pagination");
 const route_utils_1 = require("../lib/route-utils");
 const router = (0, express_1.Router)();
 const param = (value) => (Array.isArray(value) ? value[0] : String(value || ''));
@@ -18,12 +19,36 @@ const employeeSchema = zod_1.z.object({
     salary: zod_1.z.coerce.number().min(0).default(0),
     joinDate: zod_1.z.string().optional(),
 });
-router.get('/', auth_1.authenticate, (0, auth_1.authorize)('hr:read'), async (_req, res) => {
-    const items = await prisma_1.prisma.employee.findMany({
-        where: { deletedAt: null },
-        orderBy: { createdAt: 'desc' },
-    });
-    res.json({ success: true, data: items });
+router.get('/', auth_1.authenticate, (0, auth_1.authorize)('hr:read'), async (req, res) => {
+    const { page, limit, search, skip } = (0, pagination_1.getPagination)(req);
+    const department = String(req.query.department || '');
+    const where = {
+        deletedAt: null,
+        ...(department ? { department: { equals: department, mode: 'insensitive' } } : {}),
+        ...(search
+            ? {
+                OR: [
+                    { firstName: { contains: search, mode: 'insensitive' } },
+                    { lastName: { contains: search, mode: 'insensitive' } },
+                    { employeeCode: { contains: search, mode: 'insensitive' } },
+                    { email: { contains: search, mode: 'insensitive' } },
+                    { phone: { contains: search, mode: 'insensitive' } },
+                    { department: { contains: search, mode: 'insensitive' } },
+                    { designation: { contains: search, mode: 'insensitive' } },
+                ],
+            }
+            : {}),
+    };
+    const [items, total] = await Promise.all([
+        prisma_1.prisma.employee.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+        }),
+        prisma_1.prisma.employee.count({ where }),
+    ]);
+    res.json({ success: true, data: (0, pagination_1.paginated)(items, total, page, limit) });
 });
 router.post('/', auth_1.authenticate, (0, auth_1.authorize)('hr:write'), async (req, res) => {
     const parsed = employeeSchema.safeParse(req.body);
