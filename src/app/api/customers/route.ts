@@ -8,7 +8,7 @@ import {
   createAuditLog,
 } from '@/lib/api/helpers';
 import { customerSchema } from '@/lib/validation/schemas';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma';
 
 export async function GET(request: Request) {
   const ctx = await requireAuth('customers:read');

@@ -9,7 +9,7 @@ import {
   createNotification,
 } from '@/lib/api/helpers';
 import { expenseSchema } from '@/lib/validation/schemas';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma';
 
 export async function GET(request: Request) {
   const ctx = await requireAuth('expenses:read');

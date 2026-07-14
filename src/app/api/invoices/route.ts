@@ -9,7 +9,7 @@ import {
   createNotification,
 } from '@/lib/api/helpers';
 import { invoiceSchema } from '@/lib/validation/schemas';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma';
 
 function calcInvoiceTotals(items: { quantity: number; unitPrice: number }[], taxRate: number) {
   const lineItems = items.map((i) => ({

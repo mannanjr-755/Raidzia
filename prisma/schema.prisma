@@ -1,5 +1,8 @@
 generator client {
   provider = "prisma-client-js"
+  // Separate client from the ERP API schema (ChartAccount, etc.) so root Next.js
+  // routes can use Account / Vendor / Invoice without overwriting @prisma/client.
+  output   = "../src/generated/prisma"
 }
 
 datasource db {

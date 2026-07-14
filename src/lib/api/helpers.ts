@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { Prisma } from '@prisma/client';
-import type { UserRole } from '@prisma/client';
+import type { Prisma, UserRole } from '@/generated/prisma';
 import { getSession } from '@/lib/auth/session-manager';
 import { hasPermission, type Permission } from '@/lib/rbac/permissions';
 
