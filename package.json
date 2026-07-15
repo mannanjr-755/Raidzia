@@ -9,14 +9,20 @@
   ],
   "scripts": {
     "dev": "tsx scripts/run-dev.ts",
-    "dev:next": "next dev",
     "dev:api": "npm run dev --workspace=@rss/api",
     "dev:web": "npm run dev --workspace=@rss/web",
-    "postinstall": "prisma generate --schema=apps/api/prisma/schema.prisma && prisma generate --schema=prisma/schema.prisma",
-    "build": "prisma generate --schema=prisma/schema.prisma && next build",
+    "dev:legacy": "next dev",
+    "postinstall": "tsx scripts/postinstall.ts",
+    "build": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api && npm run build --workspace=@rss/web",
+    "build:web": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/web",
+    "build:netlify": "tsx scripts/prepare-netlify.ts && npm run build:web",
+    "build:api": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api",
+    "build:legacy": "prisma generate --schema=prisma/schema.prisma && next build",
     "db:generate:root": "prisma generate --schema=prisma/schema.prisma",
-    "build:workspaces": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api && npm run build --workspace=@rss/web",
-    "start": "next start",
+    "start": "tsx scripts/run-prod.ts",
+    "start:api": "npm run start --workspace=@rss/api",
+    "start:web": "npm run start --workspace=@rss/web",
+    "start:legacy": "next start",
     "db:start": "tsx scripts/start-postgres.ts",
     "db:create": "tsx scripts/create-db.ts",
     "db:setup": "npm run db:create && npm run db:push --workspace=@rss/api && npm run db:seed --workspace=@rss/api",
@@ -46,6 +52,7 @@
     "recharts": "^2.15.0",
     "sonner": "^1.7.2",
     "tailwind-merge": "^2.6.0",
+    "tsx": "^4.23.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -64,7 +71,6 @@
     "prisma": "^6.3.1",
     "tailwindcss-animate": "^1.0.7",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.23.0",
     "typescript": "^5.7.3"
   },
   "engines": {

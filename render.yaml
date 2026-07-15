@@ -1,0 +1,31 @@
+# Deploy apps/api to Render (or similar) — Netlify hosts frontend only.
+# Create a Web Service on Render pointing to this repo with:
+#   Root Directory: (leave blank — repo root)
+#   Build Command: npm install && npm run build:api
+#   Start Command: npm run start:api
+#
+# Required env vars on Render:
+#   DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, CORS_ORIGINS, API_PORT=4000
+
+services:
+  - type: web
+    name: rss-erp-api
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:api
+    startCommand: npm run start:api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "4000"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

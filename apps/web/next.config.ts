@@ -1,6 +1,13 @@
 import type { NextConfig } from 'next';
 
-const apiOrigin = process.env.API_ORIGIN || 'http://127.0.0.1:4000';
+/**
+ * Next.js rewrites are evaluated at build time.
+ * Set API_ORIGIN before `next build`:
+ *   - Local / single-host Docker: http://127.0.0.1:4000
+ *   - Docker Compose (web + api services): http://api:4000
+ *   - Split hosting (e.g. Vercel web + VPS API): https://api.yourdomain.com
+ */
+const apiOrigin = (process.env.API_ORIGIN || 'http://127.0.0.1:4000').replace(/\/$/, '');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

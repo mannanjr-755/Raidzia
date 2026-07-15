@@ -1,1 +1,149 @@
-{"version":3,"caseSensitive":false,"basePath":"","rewrites":{"beforeFiles":[],"afterFiles":[{"source":"/api/:path*","destination":"http://127.0.0.1:4000/api/:path*","regex":"^\\/api(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?(?:\\/)?$","check":true}],"fallback":[]},"redirects":[{"source":"/:path+/","destination":"/:path+","permanent":true,"internal":true,"regex":"^(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$"}],"headers":[]}
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [
+      {
+        "source": "/api/:path*",
+        "destination": "http://127.0.0.1:4000/api/:path*",
+        "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      }
+    ],
+    "fallback": []
+  },
+  "dynamicRoutes": [],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/accounting",
+      "regex": "^/accounting(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/accounting(?:/)?$"
+    },
+    {
+      "page": "/change-password",
+      "regex": "^/change\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/change\\-password(?:/)?$"
+    },
+    {
+      "page": "/crm",
+      "regex": "^/crm(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/crm(?:/)?$"
+    },
+    {
+      "page": "/digital-twin",
+      "regex": "^/digital\\-twin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/digital\\-twin(?:/)?$"
+    },
+    {
+      "page": "/expenses",
+      "regex": "^/expenses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/expenses(?:/)?$"
+    },
+    {
+      "page": "/hr",
+      "regex": "^/hr(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/hr(?:/)?$"
+    },
+    {
+      "page": "/inventory",
+      "regex": "^/inventory(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/inventory(?:/)?$"
+    },
+    {
+      "page": "/land-bank",
+      "regex": "^/land\\-bank(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/land\\-bank(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/notifications",
+      "regex": "^/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/notifications(?:/)?$"
+    },
+    {
+      "page": "/project-feasibility",
+      "regex": "^/project\\-feasibility(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/project\\-feasibility(?:/)?$"
+    },
+    {
+      "page": "/projects",
+      "regex": "^/projects(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/projects(?:/)?$"
+    },
+    {
+      "page": "/properties",
+      "regex": "^/properties(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/properties(?:/)?$"
+    },
+    {
+      "page": "/reports",
+      "regex": "^/reports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports(?:/)?$"
+    },
+    {
+      "page": "/sales",
+      "regex": "^/sales(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sales(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

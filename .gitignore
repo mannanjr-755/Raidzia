@@ -39,3 +39,16 @@ yarn-error.log*
 # local build helpers
 /.tmp-home/
 
+# embedded / local database data (must not be deployed or committed)
+.data/
+
+# workspace build outputs
+apps/api/dist/
+packages/shared/dist/
+
+# generated Netlify API proxy (created at build time)
+apps/web/public/_redirects
+
+# local uploads
+apps/api/uploads/
+

@@ -6,7 +6,7 @@ exports.approveExpense = approveExpense;
 exports.stockOut = stockOut;
 const prisma_1 = require("../lib/prisma");
 const auth_1 = require("../lib/auth");
-async function generateInstallments(bookingId, totalAmount, downPayment, count, startDate) {
+async function generateInstallments(bookingId, totalAmount, downPayment, count, startDate, db = prisma_1.prisma) {
     const remaining = totalAmount - downPayment;
     const installmentAmount = remaining / count;
     const installments = [];
@@ -17,7 +17,7 @@ async function generateInstallments(bookingId, totalAmount, downPayment, count, 
             bookingId, number: i, amount: installmentAmount, dueDate,
         });
     }
-    await prisma_1.prisma.installment.createMany({ data: installments });
+    await db.installment.createMany({ data: installments });
     return installments;
 }
 async function confirmBooking(bookingId, userId) {
@@ -34,7 +34,7 @@ async function confirmBooking(bookingId, userId) {
         await tx.unit.update({ where: { id: booking.unitId }, data: { status: 'BOOKED' } });
         const existing = await tx.installment.count({ where: { bookingId } });
         if (existing === 0) {
-            await generateInstallments(bookingId, (0, auth_1.toNum)(booking.totalAmount), (0, auth_1.toNum)(booking.downPayment), 12, new Date());
+            await generateInstallments(bookingId, (0, auth_1.toNum)(booking.totalAmount), (0, auth_1.toNum)(booking.downPayment), 12, new Date(), tx);
         }
         const revenueAccount = await tx.chartAccount.findFirst({ where: { code: '4000' } });
         const cashAccount = await tx.chartAccount.findFirst({ where: { code: '1000' } });

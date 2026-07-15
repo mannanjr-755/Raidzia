@@ -1,4 +1,7 @@
-export declare function generateInstallments(bookingId: string, totalAmount: number, downPayment: number, count: number, startDate: Date): Promise<{
+import type { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+type DbClient = Prisma.TransactionClient | typeof prisma;
+export declare function generateInstallments(bookingId: string, totalAmount: number, downPayment: number, count: number, startDate: Date, db?: DbClient): Promise<{
     bookingId: string;
     number: number;
     amount: number;
@@ -15,8 +18,8 @@ export declare function confirmBooking(bookingId: string, userId: string): Promi
         floorId: string;
         unitNumber: string;
         unitType: import(".prisma/client").$Enums.UnitType;
-        area: import("@prisma/client/runtime/library").Decimal;
-        price: import("@prisma/client/runtime/library").Decimal;
+        area: Prisma.Decimal;
+        price: Prisma.Decimal;
         bedrooms: number | null;
         bathrooms: number | null;
     };
@@ -39,10 +42,10 @@ export declare function confirmBooking(bookingId: string, userId: string): Promi
         id: string;
         createdAt: Date;
         status: import(".prisma/client").$Enums.InstallmentStatus;
-        amount: import("@prisma/client/runtime/library").Decimal;
+        amount: Prisma.Decimal;
         bookingId: string;
         dueDate: Date;
-        paidAmount: import("@prisma/client/runtime/library").Decimal;
+        paidAmount: Prisma.Decimal;
         paidAt: Date | null;
     }[];
 } & {
@@ -56,9 +59,9 @@ export declare function confirmBooking(bookingId: string, userId: string): Promi
     bookingNumber: string;
     unitId: string;
     salesAgentId: string | null;
-    totalAmount: import("@prisma/client/runtime/library").Decimal;
-    downPayment: import("@prisma/client/runtime/library").Decimal;
-    discount: import("@prisma/client/runtime/library").Decimal;
+    totalAmount: Prisma.Decimal;
+    downPayment: Prisma.Decimal;
+    discount: Prisma.Decimal;
     bookingDate: Date;
     possessionDate: Date | null;
 }) | null>;
@@ -75,10 +78,10 @@ export declare function approveExpense(expenseId: string, approverId: string): P
         city: string | null;
         clientName: string | null;
         status: import(".prisma/client").$Enums.ProjectStatus;
-        budget: import("@prisma/client/runtime/library").Decimal;
-        estimatedCost: import("@prisma/client/runtime/library").Decimal;
-        actualCost: import("@prisma/client/runtime/library").Decimal;
-        completionPct: import("@prisma/client/runtime/library").Decimal;
+        budget: Prisma.Decimal;
+        estimatedCost: Prisma.Decimal;
+        actualCost: Prisma.Decimal;
+        completionPct: Prisma.Decimal;
         startDate: Date | null;
         endDate: Date | null;
         managerId: string | null;
@@ -94,7 +97,7 @@ export declare function approveExpense(expenseId: string, approverId: string): P
     projectId: string | null;
     accountId: string | null;
     creatorId: string | null;
-    amount: import("@prisma/client/runtime/library").Decimal;
+    amount: Prisma.Decimal;
     category: import(".prisma/client").$Enums.ExpenseCategory;
     expenseDate: Date;
     receiptUrl: string | null;
@@ -110,9 +113,10 @@ export declare function stockOut(itemId: string, quantity: number, projectId?: s
     category: string;
     unit: string;
     sku: string;
-    quantity: import("@prisma/client/runtime/library").Decimal;
-    minStock: import("@prisma/client/runtime/library").Decimal;
-    unitCost: import("@prisma/client/runtime/library").Decimal;
+    quantity: Prisma.Decimal;
+    minStock: Prisma.Decimal;
+    unitCost: Prisma.Decimal;
     barcode: string | null;
     warehouse: string;
 } | null>;
+export {};

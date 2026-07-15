@@ -1,4 +1,19 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/change-password/page": "app/change-password/page.js",
   "/login/page": "app/login/page.js",
-  "/(dashboard)/page": "app/(dashboard)/page.js"
+  "/(dashboard)/crm/page": "app/(dashboard)/crm/page.js",
+  "/(dashboard)/accounting/page": "app/(dashboard)/accounting/page.js",
+  "/(dashboard)/digital-twin/page": "app/(dashboard)/digital-twin/page.js",
+  "/(dashboard)/expenses/page": "app/(dashboard)/expenses/page.js",
+  "/(dashboard)/hr/page": "app/(dashboard)/hr/page.js",
+  "/(dashboard)/inventory/page": "app/(dashboard)/inventory/page.js",
+  "/(dashboard)/land-bank/page": "app/(dashboard)/land-bank/page.js",
+  "/(dashboard)/notifications/page": "app/(dashboard)/notifications/page.js",
+  "/(dashboard)/page": "app/(dashboard)/page.js",
+  "/(dashboard)/project-feasibility/page": "app/(dashboard)/project-feasibility/page.js",
+  "/(dashboard)/projects/page": "app/(dashboard)/projects/page.js",
+  "/(dashboard)/properties/page": "app/(dashboard)/properties/page.js",
+  "/(dashboard)/reports/page": "app/(dashboard)/reports/page.js",
+  "/(dashboard)/sales/page": "app/(dashboard)/sales/page.js"
 }

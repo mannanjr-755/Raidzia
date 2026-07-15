@@ -12,6 +12,8 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../../../.env') });
 dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../.env'), override: true });
+// Must load before route modules so Router.prototype is patched in time.
+require('./lib/async-routes');
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const dashboard_routes_1 = __importDefault(require("./routes/dashboard.routes"));
 const projects_routes_1 = __importDefault(require("./routes/projects.routes"));
@@ -23,6 +25,7 @@ const feasibility_routes_1 = __importDefault(require("./routes/feasibility.route
 const properties_routes_1 = __importDefault(require("./routes/properties.routes"));
 const reports_routes_1 = __importDefault(require("./routes/reports.routes"));
 const prisma_1 = require("./lib/prisma");
+const auth_1 = require("./lib/auth");
 const route_utils_1 = require("./lib/route-utils");
 const app = (0, express_1.default)();
 const PORT = parseInt(process.env.API_PORT || '4000');
@@ -30,6 +33,9 @@ const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://1
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+if (process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use((0, cors_1.default)({
@@ -81,6 +87,13 @@ app.use((err, _req, res, _next) => {
     (0, route_utils_1.sendPrismaError)(res, err, 'Internal server error');
 });
 async function start() {
+    try {
+        (0, auth_1.assertJwtSecretsConfigured)();
+    }
+    catch (error) {
+        console.error(error instanceof Error ? error.message : error);
+        process.exit(1);
+    }
     try {
         await prisma_1.prisma.$connect();
         console.log('Database connected');

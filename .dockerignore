@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+.next
+**/.next
+.git
+.data
+uploads
+coverage
+*.md
+.env
+.env*.local
+apps/api/dist
+**/dist
+.tmp-home
+apps/web/.next
+src/generated

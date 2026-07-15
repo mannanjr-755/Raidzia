@@ -20,6 +20,7 @@ interface Unit {
   id: string;
   unitNumber: string;
   status: string;
+  area?: number | string;
   areaSqFt?: number | string;
   type?: string;
 }
@@ -51,6 +52,7 @@ const unitStatusColors: Record<string, { bg: string; border: string; label: stri
 function UnitCell({ unit }: { unit: Unit }) {
   const style = unitStatusColors[unit.status] || unitStatusColors.AVAILABLE;
   const isLight = unit.status === 'AVAILABLE';
+  const area = unit.area ?? unit.areaSqFt;
 
   return (
     <div
@@ -63,9 +65,9 @@ function UnitCell({ unit }: { unit: Unit }) {
       title={`${unit.unitNumber} - ${style.label}`}
     >
       <span className={cn('text-xs font-bold', !isLight && 'text-white')}>{unit.unitNumber}</span>
-      {unit.areaSqFt && (
+      {area && (
         <span className={cn('text-[10px]', !isLight ? 'text-white/80' : 'text-luxury-slate')}>
-          {Number(unit.areaSqFt)} sqft
+          {Number(area)} sqft
         </span>
       )}
     </div>
