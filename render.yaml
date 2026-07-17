@@ -22,6 +22,8 @@ services:
         value: /api
       - key: API_ORIGIN
         value: http://127.0.0.1:4000
+      - key: ALLOW_PRIVATE_API_REWRITE
+        value: "true"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

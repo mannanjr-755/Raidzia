@@ -34,19 +34,27 @@ This runs `scripts/run-prod.ts` which starts the API, waits for health check, th
 ### Netlify / Vercel (frontend only)
 
 These platforms **cannot** run Express and **cannot** proxy to `127.0.0.1`.
-Using a private rewrite causes `DNS_HOSTNAME_RESOLVED_PRIVATE`.
+That causes `DNS_HOSTNAME_RESOLVED_PRIVATE`.
 
-1. Deploy the API separately (Railway / Render / VPS): `npm run build:api && npm run start:api`
-2. In Netlify/Vercel environment variables set:
-   ```
-   NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API.example.com/api
-   ```
-3. On the API host set:
-   ```
-   CORS_ORIGINS=https://YOUR-SITE.netlify.app
-   ```
+**Required Netlify environment variable:**
 
-**Never** set `API_ORIGIN=http://127.0.0.1:4000` on Netlify or Vercel.
+```
+NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API.example.com/api
+```
+
+**On the API host** (Railway / Render / VPS):
+
+```
+CORS_ORIGINS=https://YOUR-SITE.netlify.app
+```
+
+Then trigger a new Netlify deploy. The build (`npm run build:cdn`) will fail if a private API URL is still configured.
+
+**Never set on Netlify:**
+- `API_ORIGIN=http://127.0.0.1:4000`
+- `NEXT_PUBLIC_API_URL=/api` alone (relative without a public API)
+
+Prefer full-stack on Railway/Render (`npm run build` + `npm start`) if you want one service for both.
 
 ### Other platforms
 

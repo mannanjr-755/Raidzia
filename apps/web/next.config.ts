@@ -1,43 +1,38 @@
 import type { NextConfig } from 'next';
 
 /**
- * Next.js rewrites are baked in at build time.
+ * API proxy rewrites — CRITICAL FOR CDN DEPLOYS
  *
- * CDN platforms (Netlify / Vercel) MUST NOT rewrite to private hosts
- * (127.0.0.1, localhost, Docker DNS names). That causes:
+ * Netlify/Vercel edge networks REJECT private destinations:
  *   DNS_HOSTNAME_RESOLVED_PRIVATE
  *
- * Strategies:
- *   1. Same-host Node (Railway/Render/Docker): API_ORIGIN=http://127.0.0.1:4000
- *      — rewrites are safe because Next and Express share the machine.
- *   2. CDN frontend + separate API: set NEXT_PUBLIC_API_URL=https://api.example.com/api
- *      — browser calls the public API directly; no rewrite needed.
- *   3. CDN frontend + public proxy: set API_ORIGIN=https://api.example.com
- *      — rewrite /api → public HTTPS origin only.
+ * Rules:
+ * 1. Absolute NEXT_PUBLIC_API_URL (https://…) → no rewrite (browser → API).
+ * 2. Public API_ORIGIN (https://…) → rewrite /api → that origin.
+ * 3. Private API_ORIGIN (127.0.0.1 / localhost / Docker DNS) → rewrite ONLY when
+ *    ALLOW_PRIVATE_API_REWRITE=true (Railway/Render/Docker same-host).
+ * 4. Default (no flag) → NO rewrite to private hosts. Ever.
  */
 
 function isPrivateHostname(url: string): boolean {
   try {
     const { hostname } = new URL(url);
+    const h = hostname.toLowerCase();
     if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '0.0.0.0' ||
-      hostname === '::1' ||
-      hostname.endsWith('.local') ||
-      hostname.endsWith('.internal') ||
-      hostname.endsWith('.railway.internal')
+      h === 'localhost' ||
+      h === '127.0.0.1' ||
+      h === '0.0.0.0' ||
+      h === '::1' ||
+      h.endsWith('.local') ||
+      h.endsWith('.internal') ||
+      h.endsWith('.railway.internal')
     ) {
       return true;
     }
-    // Docker Compose service names / single-label hostnames (e.g. "api")
-    if (!hostname.includes('.') && hostname !== 'localhost') {
-      return true;
-    }
-    // RFC1918 private IPv4
-    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(hostname)) {
-      return true;
-    }
+    // Docker Compose service names (e.g. "api")
+    if (!h.includes('.')) return true;
+    // RFC1918
+    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(h)) return true;
     return false;
   } catch {
     return true;
@@ -53,47 +48,58 @@ function isCdnPlatform(): boolean {
   );
 }
 
-const rawApiOrigin = (process.env.API_ORIGIN || '').replace(/\/$/, '');
-const publicApiUrl = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, '');
+const rawApiOrigin = (process.env.API_ORIGIN || '').trim().replace(/\/$/, '');
+const publicApiUrl = (process.env.NEXT_PUBLIC_API_URL || '/api').trim().replace(/\/$/, '');
+const allowPrivate = process.env.ALLOW_PRIVATE_API_REWRITE === 'true';
 const onCdn = isCdnPlatform();
 
-// Prefer explicit public API URL for browser → API (no edge rewrite).
 const usesDirectPublicApi =
   publicApiUrl.startsWith('https://') || publicApiUrl.startsWith('http://');
 
 let rewriteDestination: string | null = null;
 
 if (usesDirectPublicApi) {
-  // Browser talks to the API host directly — skip Next rewrites.
+  if (isPrivateHostname(publicApiUrl)) {
+    throw new Error(
+      `[next.config] NEXT_PUBLIC_API_URL is a private host (${publicApiUrl}). ` +
+        'Use a public HTTPS URL, e.g. https://api.yourdomain.com/api'
+    );
+  }
   rewriteDestination = null;
-  console.log(`[next.config] Direct public API: ${publicApiUrl} (no /api rewrite)`);
+  console.log(`[next.config] Direct public API → ${publicApiUrl} (no rewrite)`);
 } else if (rawApiOrigin && !isPrivateHostname(rawApiOrigin)) {
-  // Public HTTPS/HTTP origin — safe to rewrite from CDN or same-host.
   rewriteDestination = `${rawApiOrigin}/api/:path*`;
-  console.log(`[next.config] Public API rewrite: /api/:path* → ${rewriteDestination}`);
-} else if (rawApiOrigin && isPrivateHostname(rawApiOrigin) && !onCdn) {
-  // Same-host Node deploy only (Railway / Render / Docker / VPS).
-  rewriteDestination = `${rawApiOrigin}/api/:path*`;
-  console.log(`[next.config] Same-host rewrite: /api/:path* → ${rewriteDestination}`);
-} else if (onCdn) {
-  // CDN with private/missing API_ORIGIN — fail loudly at build time.
-  const message = [
-    'CDN deploy detected (Netlify/Vercel) but no public API URL is configured.',
-    'This causes DNS_HOSTNAME_RESOLVED_PRIVATE when rewriting to 127.0.0.1/localhost.',
-    '',
-    'Fix — set ONE of these in your hosting environment before build:',
-    '  NEXT_PUBLIC_API_URL=https://your-api.example.com/api',
-    '  API_ORIGIN=https://your-api.example.com',
-    '',
-    'Also set CORS_ORIGINS on the API to your frontend URL.',
-  ].join('\n');
-  console.error(`[next.config] ${message}`);
-  throw new Error(message);
+  console.log(`[next.config] Public rewrite → ${rewriteDestination}`);
+} else if (rawApiOrigin && isPrivateHostname(rawApiOrigin)) {
+  if (allowPrivate && !onCdn) {
+    rewriteDestination = `${rawApiOrigin}/api/:path*`;
+    console.log(`[next.config] Same-host private rewrite (allowed) → ${rewriteDestination}`);
+  } else if (onCdn) {
+    throw new Error(
+      [
+        `[next.config] Refusing private API rewrite (${rawApiOrigin}).`,
+        'This causes DNS_HOSTNAME_RESOLVED_PRIVATE on Netlify/Vercel.',
+        '',
+        'Set NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API/api in your CDN environment.',
+      ].join('\n')
+    );
+  } else {
+    console.warn(
+      `[next.config] Skipping private rewrite (${rawApiOrigin}). ` +
+        'Set ALLOW_PRIVATE_API_REWRITE=true for same-host, or use a public NEXT_PUBLIC_API_URL.'
+    );
+    rewriteDestination = null;
+  }
+} else if (allowPrivate && !onCdn) {
+  rewriteDestination = 'http://127.0.0.1:4000/api/:path*';
+  console.log(`[next.config] Default same-host rewrite → ${rewriteDestination}`);
 } else {
-  // Local / same-host default.
-  const fallback = 'http://127.0.0.1:4000';
-  rewriteDestination = `${fallback}/api/:path*`;
-  console.log(`[next.config] Default local rewrite: /api/:path* → ${rewriteDestination}`);
+  // Safe default: no private rewrite baked into the build.
+  rewriteDestination = null;
+  console.log(
+    '[next.config] No /api rewrite. Set NEXT_PUBLIC_API_URL to a public HTTPS API, ' +
+      'or ALLOW_PRIVATE_API_REWRITE=true for same-host deploys.'
+  );
 }
 
 const nextConfig: NextConfig = {
@@ -103,15 +109,8 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   async rewrites() {
-    if (!rewriteDestination) {
-      return [];
-    }
-    return [
-      {
-        source: '/api/:path*',
-        destination: rewriteDestination,
-      },
-    ];
+    if (!rewriteDestination) return [];
+    return [{ source: '/api/:path*', destination: rewriteDestination }];
   },
 };
 

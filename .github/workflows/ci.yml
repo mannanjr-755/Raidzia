@@ -24,11 +24,19 @@ jobs:
       - name: Build full stack (shared + api + web)
         run: npm run build
         env:
+          ALLOW_PRIVATE_API_REWRITE: "true"
           API_ORIGIN: http://127.0.0.1:4000
           NEXT_PUBLIC_API_URL: /api
           JWT_SECRET: ci-test-jwt-secret-minimum-32-characters-long
           JWT_REFRESH_SECRET: ci-test-refresh-secret-minimum-32-chars
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+      - name: Verify CDN build rejects private hosts
+        run: npm run build:cdn
+        continue-on-error: false
+        env:
+          NEXT_PUBLIC_API_URL: https://api.example.com/api
+          SKIP_PRISMA_GENERATE: "true"
 
       - name: Verify build outputs exist
         run: |

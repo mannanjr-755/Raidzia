@@ -16,3 +16,7 @@ healthcheckPath = "/api/health"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 5
+
+# Same-host API+Web: private rewrite 127.0.0.1 is intentional and safe here.
+[build.environment]
+ALLOW_PRIVATE_API_REWRITE = "true"
