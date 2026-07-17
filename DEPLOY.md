@@ -21,6 +21,13 @@ JWT_REFRESH_SECRET=...
 CORS_ORIGINS=https://YOUR-FRONTEND.netlify.app
 ```
 
+Optional staging:
+
+```
+CORS_ALLOW_DEPLOY_PREVIEWS=true
+```
+
+(allows `*.netlify.app` and `*.vercel.app` HTTPS origins)
 ## 2. Deploy the frontend (Netlify)
 
 1. Import the GitHub repo: `https://github.com/mannanjr-755/Raidzia`

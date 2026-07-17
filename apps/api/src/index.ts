@@ -25,30 +25,28 @@ import reportsRoutes from './routes/reports.routes';
 import { prisma } from './lib/prisma';
 import { assertJwtSecretsConfigured } from './lib/auth';
 import { sendPrismaError } from './lib/route-utils';
+import { corsOriginDelegate, getConfiguredOrigins } from './lib/cors';
 
 const app = express();
 const PORT = parseInt(process.env.API_PORT || '4000');
-const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
 
 if (process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-app.use(helmet());
+app.use(helmet({
+  // API is called cross-origin from Netlify/Vercel; disable CORP that can block reads
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(compression());
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin || corsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error(`CORS blocked origin: ${origin}`));
-    },
+    origin: corsOriginDelegate,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Disposition'],
+    maxAge: 86400,
   })
 );
 app.use(express.json({ limit: '10mb' }));
@@ -114,7 +112,21 @@ async function start() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
+    const origins = getConfiguredOrigins();
+    const allowLocal =
+      process.env.NODE_ENV !== 'production' ||
+      process.env.CORS_ALLOW_LOCALHOST === 'true' ||
+      process.env.CORS_ALLOW_LOCALHOST === '1';
     console.log(`RSS ERP API running on http://localhost:${PORT}`);
+    console.log(
+      `CORS: origins=${origins.length ? origins.join(', ') : '(none)'}; localhost-any-port=${allowLocal ? 'yes' : 'no'}`
+    );
+    if (process.env.NODE_ENV === 'production' && origins.length === 0 && !process.env.NEXT_PUBLIC_APP_URL) {
+      console.warn(
+        'WARNING: No CORS_ORIGINS or NEXT_PUBLIC_APP_URL set in production. ' +
+          'Browser requests from Netlify/Vercel will be blocked. Set CORS_ORIGINS=https://your-frontend.example.com'
+      );
+    }
   });
 }
 
