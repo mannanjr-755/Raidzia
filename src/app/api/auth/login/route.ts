@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
       message: AUTH_MESSAGES.loginSuccess,
       data: { user: result.user },
     });
-  } catch {
+  } catch (error) {
+    console.error('[Login Error]', error);
     return NextResponse.json({ success: false, error: AUTH_ERRORS.generic }, { status: 500 });
   }
 }

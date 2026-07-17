@@ -13,7 +13,7 @@
     "dev:web": "npm run dev --workspace=@rss/web",
     "dev:legacy": "next dev",
     "postinstall": "tsx scripts/postinstall.ts",
-    "build": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api && npm run build --workspace=@rss/web",
+    "build": "npx prisma generate --schema=prisma/schema.prisma && next build",
     "build:web": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/web",
     "build:netlify": "tsx scripts/prepare-netlify.ts && npm run build:web",
     "build:api": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api",
