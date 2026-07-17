@@ -1,15 +1,23 @@
 import { spawnSync } from 'child_process';
 import { spawn } from 'child_process';
+import fs from 'fs';
 import net from 'net';
 import path from 'path';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
-// Prefer the API workspace env for local embedded Postgres (root .env may point elsewhere).
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../apps/api/.env'), override: true });
 
 const POSTGRES_PORT = 5433;
+const ROOT = path.resolve(__dirname, '..');
+const QUERY_ENGINE = path.join(
+  ROOT,
+  'node_modules',
+  '.prisma',
+  'client',
+  'query_engine-windows.dll.node'
+);
 
 function isPortOpen(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -37,9 +45,9 @@ async function waitForPort(port: number, label: string, maxAttempts = 120): Prom
   throw new Error(`${label} did not become ready on port ${port}`);
 }
 
-function run(command: string, args: string[]) {
+function run(command: string, args: string[]): void {
   const result = spawnSync(command, args, {
-    cwd: process.cwd(),
+    cwd: ROOT,
     stdio: 'inherit',
     shell: true,
   });
@@ -47,6 +55,56 @@ function run(command: string, args: string[]) {
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(' ')} failed`);
   }
+}
+
+function runCapture(command: string, args: string[]): { status: number; stderr: string; stdout: string } {
+  const result = spawnSync(command, args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    shell: true,
+  });
+  return {
+    status: result.status ?? 1,
+    stderr: String(result.stderr || ''),
+    stdout: String(result.stdout || ''),
+  };
+}
+
+function prismaClientExists(): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require.resolve('@prisma/client');
+    return fs.existsSync(QUERY_ENGINE) || process.platform !== 'win32';
+  } catch {
+    return false;
+  }
+}
+
+function generatePrismaClient(): void {
+  console.log('Generating Prisma client...');
+  const result = runCapture('npm', ['run', 'db:generate', '--workspace=@rss/api']);
+
+  if (result.status === 0) {
+    console.log('Prisma client generated.');
+    return;
+  }
+
+  const output = `${result.stdout}\n${result.stderr}`;
+  const isEperm =
+    output.includes('EPERM') ||
+    output.includes('operation not permitted') ||
+    output.includes('EACCES');
+
+  if (isEperm && prismaClientExists()) {
+    console.warn(
+      'Prisma generate skipped: query engine file is locked by another process (EPERM).\n' +
+        'Using the existing Prisma client. Stop other Node/API processes if the schema changed.'
+    );
+    return;
+  }
+
+  console.error(output);
+  throw new Error('npm run db:generate --workspace=@rss/api failed');
 }
 
 function runWithRetry(command: string, args: string[], maxRetries = 3): void {
@@ -61,7 +119,9 @@ function runWithRetry(command: string, args: string[], maxRetries = 3): void {
       }
       console.log(`Command failed (attempt ${attempt}/${maxRetries}), retrying in 2s...`);
       const end = Date.now() + 2000;
-      while (Date.now() < end) { /* sync wait */ }
+      while (Date.now() < end) {
+        /* sync wait */
+      }
     }
   }
 }
@@ -70,7 +130,7 @@ async function main() {
   if (!(await isPortOpen(POSTGRES_PORT))) {
     console.log('Starting embedded PostgreSQL...');
     const pg = spawn('npx', ['tsx', 'scripts/start-postgres.ts'], {
-      cwd: process.cwd(),
+      cwd: ROOT,
       stdio: 'ignore',
       shell: true,
       detached: true,
@@ -80,8 +140,10 @@ async function main() {
   }
 
   runWithRetry('npm', ['run', 'db:create']);
-  run('npm', ['run', 'db:generate', '--workspace=@rss/api']);
-  runWithRetry('npm', ['run', 'db:push', '--workspace=@rss/api']);
+  generatePrismaClient();
+  // Skip generate here — regenerating locks the Windows query engine and crashes
+  // any already-running API (tsx watch), which then races with a new API start.
+  runWithRetry('npm', ['run', 'db:push', '--workspace=@rss/api', '--', '--skip-generate']);
 
   const prisma = new PrismaClient();
   try {
