@@ -1,12 +1,17 @@
 # RSS Construction ERP — Netlify (frontend only)
 #
-# The Express API (apps/api) CANNOT run on Netlify — deploy it separately
-# (Render, Railway, Fly.io, VPS, or Docker) and point API_ORIGIN to it.
+# Express API CANNOT run on Netlify. Deploy API separately, then configure:
 #
-# Required Netlify environment variables:
-#   API_ORIGIN=https://your-api.example.com
-#   NEXT_PUBLIC_API_URL=/api
-#   NEXT_PUBLIC_APP_URL=https://your-site.netlify.app
+# REQUIRED (pick one) — set in Netlify → Site settings → Environment variables:
+#   NEXT_PUBLIC_API_URL = https://YOUR-PUBLIC-API.example.com/api   ← recommended
+#   OR
+#   API_ORIGIN          = https://YOUR-PUBLIC-API.example.com
+#
+# Also set on the API host:
+#   CORS_ORIGINS = https://YOUR-SITE.netlify.app
+#
+# NEVER set API_ORIGIN=http://127.0.0.1:4000 on Netlify
+# (causes DNS_HOSTNAME_RESOLVED_PRIVATE).
 
 [build]
   command = "npm run build:netlify"
@@ -15,6 +20,8 @@
 [build.environment]
   NODE_VERSION = "20"
   SKIP_PRISMA_GENERATE = "true"
+  NETLIFY = "true"
+  SKIP_PRIVATE_API_REWRITE = "true"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

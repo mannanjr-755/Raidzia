@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, '');
 
 const ACCESS_TOKEN_KEY = 'rss_access_token';
 const REFRESH_TOKEN_KEY = 'rss_refresh_token';
@@ -158,10 +158,11 @@ async function request<T>(
   try {
     res = await fetch(`${API_URL}${path}`, { ...options, headers });
   } catch {
-    throw new ApiError(
-      `Cannot reach API at ${API_URL}. Run "npm run dev" from the project root to start PostgreSQL, API, and web.`,
-      0
-    );
+    const hint =
+      API_URL.startsWith('http')
+        ? `Cannot reach API at ${API_URL}. Check NEXT_PUBLIC_API_URL and CORS_ORIGINS.`
+        : `Cannot reach API at ${API_URL}. For Netlify/Vercel set NEXT_PUBLIC_API_URL to your public API (https://…). Locally run "npm run dev".`;
+    throw new ApiError(hint, 0);
   }
 
   if (res.status === 401 && retry && attachAuth) {

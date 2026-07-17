@@ -17,6 +17,7 @@
     "build:root": "npx prisma generate --schema=prisma/schema.prisma && next build",
     "build:web": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/web",
     "build:netlify": "tsx scripts/prepare-netlify.ts && npm run build:web",
+    "build:cdn": "tsx scripts/prepare-netlify.ts && npm run build:web",
     "build:api": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api",
     "build:legacy": "prisma generate --schema=prisma/schema.prisma && next build",
     "verify:build": "tsx scripts/verify-build.ts",

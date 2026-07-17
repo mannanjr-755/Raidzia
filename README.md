@@ -31,14 +31,30 @@ npm start
 
 This runs `scripts/run-prod.ts` which starts the API, waits for health check, then starts the web app.
 
-### Supported platforms
+### Netlify / Vercel (frontend only)
 
-| Platform | Config file | Notes |
-|----------|-------------|-------|
-| **Railway** | `railway.toml` | Full stack — `npm run build` + `npm start` |
-| **Render** | `render.yaml` | Full stack — single web service |
-| **Docker** | `Dockerfile` | `docker compose up -d --build app` |
-| Netlify / Vercel | `netlify.toml` / `vercel.json` | **Frontend only** — API must be hosted separately |
+These platforms **cannot** run Express and **cannot** proxy to `127.0.0.1`.
+Using a private rewrite causes `DNS_HOSTNAME_RESOLVED_PRIVATE`.
+
+1. Deploy the API separately (Railway / Render / VPS): `npm run build:api && npm run start:api`
+2. In Netlify/Vercel environment variables set:
+   ```
+   NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API.example.com/api
+   ```
+3. On the API host set:
+   ```
+   CORS_ORIGINS=https://YOUR-SITE.netlify.app
+   ```
+
+**Never** set `API_ORIGIN=http://127.0.0.1:4000` on Netlify or Vercel.
+
+### Other platforms
+
+| Platform | Config | Notes |
+|----------|--------|-------|
+| Railway | `railway.toml` | Full stack — `npm run build` + `npm start` |
+| Render | `render.yaml` | Full stack — single web service |
+| Docker | `Dockerfile` | `docker compose up -d --build app` |
 
 ### Required environment variables
 
