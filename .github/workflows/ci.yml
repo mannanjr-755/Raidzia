@@ -31,11 +31,15 @@ jobs:
           JWT_REFRESH_SECRET: ci-test-refresh-secret-minimum-32-chars
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
 
-      - name: Verify CDN build rejects private hosts
+      - name: Verify CDN build (with public API URL)
         run: npm run build:cdn
-        continue-on-error: false
         env:
           NEXT_PUBLIC_API_URL: https://api.example.com/api
+          SKIP_PRISMA_GENERATE: "true"
+
+      - name: Verify CDN build (no API URL still succeeds, no private rewrites)
+        run: npm run build:cdn && npm run verify:cdn
+        env:
           SKIP_PRISMA_GENERATE: "true"
 
       - name: Verify build outputs exist
