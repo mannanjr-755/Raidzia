@@ -9,7 +9,8 @@ export async function GET() {
       message: 'RSS ERP API is healthy',
       database: 'connected',
     });
-  } catch {
+  } catch (error) {
+    console.error('[Health Check Error]', error);
     return NextResponse.json(
       {
         success: false,

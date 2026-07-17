@@ -1,11 +1,16 @@
-# RSS Construction ERP — Netlify
+# RSS Construction ERP — Netlify (frontend only)
 #
-# Builds the root-level Next.js app (src/) with API routes.
-# DATABASE_URL and SESSION_SECRET must be set in Netlify environment variables.
+# The Express API (apps/api) CANNOT run on Netlify — deploy it separately
+# (Render, Railway, Fly.io, VPS, or Docker) and point API_ORIGIN to it.
+#
+# Required Netlify environment variables:
+#   API_ORIGIN=https://your-api.example.com
+#   NEXT_PUBLIC_API_URL=/api
+#   NEXT_PUBLIC_APP_URL=https://your-site.netlify.app
 
 [build]
-  command = "npx prisma generate --schema=prisma/schema.prisma && next build"
-  publish = ".next"
+  command = "npm run build:netlify"
+  publish = "apps/web/.next"
 
 [build.environment]
   NODE_VERSION = "20"

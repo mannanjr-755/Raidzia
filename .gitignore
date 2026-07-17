@@ -16,6 +16,8 @@ uploads/
 /.next/
 **/.next/
 /out/
+*.tsbuildinfo
+**/*.tsbuildinfo
 
 # production
 /build

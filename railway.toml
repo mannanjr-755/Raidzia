@@ -1,8 +1,18 @@
+# Railway — full-stack deploy (API + Web together)
+# One service runs both via scripts/run-prod.ts after npm run build.
+#
+# Required env vars in Railway dashboard:
+#   DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, CORS_ORIGINS
+# Optional:
+#   API_PORT=4000, WEB_PORT (defaults to Railway PORT), NEXT_PUBLIC_APP_URL
+
 [build]
-  builder = "nixpacks"
-  buildCommand = "npx prisma generate --schema=prisma/schema.prisma && next build"
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build"
 
 [deploy]
-  startCommand = "next start"
-  restartPolicyType = "on_failure"
-  restartPolicyMaxRetries = 5
+startCommand = "npm start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5

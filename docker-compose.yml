@@ -1,14 +1,41 @@
-# Full-stack deploy (Postgres + Redis + API + Web):
-#   docker compose up -d --build
+# Full-stack deploy options:
 #
-# Local development without Docker app containers:
-#   npm run db:start   (embedded PostgreSQL on 5433)
+# Option A — Single container (API + Web together, recommended):
+#   docker compose up -d --build app postgres redis
+#
+# Option B — Separate containers:
+#   docker compose up -d --build api web postgres redis
+#
+# Local development without Docker:
 #   npm run dev
-#
-# DATABASE_URL for Docker stack:
-#   postgresql://rss_user:rss_password@postgres:5432/rss_erp?schema=public
 
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rss-erp-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_PORT: 4000
+      WEB_PORT: 3000
+      DATABASE_URL: postgresql://rss_user:rss_password@postgres:5432/rss_erp?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production-min-32-chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-refresh-secret-in-production-min-32-chars}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      API_ORIGIN: http://127.0.0.1:4000
+      NEXT_PUBLIC_API_URL: /api
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      TRUST_PROXY: "1"
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+
   postgres:
     image: postgres:16-alpine
     container_name: rss-erp-db

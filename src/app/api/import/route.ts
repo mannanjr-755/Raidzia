@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
           },
         });
         imported++;
-      } catch {
-        errors.push(`Failed: ${row.name} - import error`);
+      } catch (err) {
+        errors.push(`Failed: ${row.name} - ${err instanceof Error ? err.message : 'import error'}`);
       }
     }
   } else if (entity === 'vendors') {
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
           data: { name: row.name, email: row.email || null, phone: row.phone || null, balance: parseFloat(row.balance || '0') || 0 },
         });
         imported++;
-      } catch {
-        errors.push(`Failed: ${row.name}`);
+      } catch (err) {
+        errors.push(`Failed: ${row.name} - ${err instanceof Error ? err.message : 'import error'}`);
       }
     }
   } else {

@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
     await createAuditLog(session.user.id, 'UPDATE', 'User', session.user.id, { action: 'password_change' });
 
     return NextResponse.json({ success: true, message: AUTH_MESSAGES.passwordChanged });
-  } catch {
+  } catch (error) {
+    console.error('[Change Password Error]', error);
     return NextResponse.json({ success: false, error: AUTH_ERRORS.generic }, { status: 500 });
   }
 }
