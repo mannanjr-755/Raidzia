@@ -1,9 +1,12 @@
 /**
- * CDN (Netlify/Vercel) frontend build orchestrator.
+ * CDN (Netlify/Vercel) frontend build — always succeeds without private DNS rewrites.
  *
- * 1. Validates public API URL (rejects 127.0.0.1 / localhost)
- * 2. Spawns web build with private rewrites DISABLED
- * 3. Verifies routes-manifest has no private destinations
+ * Rules:
+ * - NEVER rewrite /api to 127.0.0.1/localhost (DNS_HOSTNAME_RESOLVED_PRIVATE)
+ * - If NEXT_PUBLIC_API_URL is a public https URL → bake it in (browser → API)
+ * - If API_ORIGIN is a public https URL → optional Netlify _redirects proxy
+ * - If only private/missing API config → still build (no rewrite); UI shows config help
+ * - Always verify routes-manifest has no private destinations
  */
 import { spawnSync } from 'child_process';
 import fs from 'fs';
@@ -35,61 +38,55 @@ function isPrivateHostname(url: string): boolean {
   }
 }
 
-function fail(message: string): never {
-  console.error('\n[build-cdn] FATAL: ' + message + '\n');
-  process.exit(1);
-}
-
 function clearRedirects() {
   if (fs.existsSync(REDIRECTS_PATH)) fs.unlinkSync(REDIRECTS_PATH);
 }
 
 function main() {
   const apiOrigin = (process.env.API_ORIGIN || '').trim().replace(/\/$/, '');
-  let publicApiUrl = (process.env.NEXT_PUBLIC_API_URL || '/api').trim().replace(/\/$/, '');
+  const publicApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim().replace(/\/$/, '');
 
-  // Strip private API_ORIGIN from the child env so Next never sees it.
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    NETLIFY: process.env.NETLIFY || 'true',
+    NETLIFY: 'true',
     SKIP_PRIVATE_API_REWRITE: 'true',
     ALLOW_PRIVATE_API_REWRITE: 'false',
+    // Block apps/web/.env.local from injecting private API_ORIGIN
+    API_ORIGIN: '',
   };
 
-  // Preferred: absolute public API
+  clearRedirects();
+
   if (publicApiUrl.startsWith('https://') || publicApiUrl.startsWith('http://')) {
     if (isPrivateHostname(publicApiUrl)) {
-      fail(`NEXT_PUBLIC_API_URL is private (${publicApiUrl}). Use https://your-api.example.com/api`);
+      console.error(
+        `\n[build-cdn] FATAL: NEXT_PUBLIC_API_URL is private (${publicApiUrl}).\n` +
+          '  Use a public HTTPS URL, e.g. https://your-api.onrender.com/api\n'
+      );
+      process.exit(1);
     }
-    clearRedirects();
-    // Block apps/web/.env.local from injecting API_ORIGIN=127.0.0.1
-    // (Next.js only skips .env keys that already exist on process.env)
-    childEnv.API_ORIGIN = '';
-    childEnv.ALLOW_PRIVATE_API_REWRITE = 'false';
-    childEnv.SKIP_PRIVATE_API_REWRITE = 'true';
     childEnv.NEXT_PUBLIC_API_URL = publicApiUrl;
-    console.log(`[build-cdn] Direct public API: ${publicApiUrl}`);
+    console.log(`[build-cdn] Public API (direct): ${publicApiUrl}`);
   } else if (apiOrigin && !isPrivateHostname(apiOrigin)) {
-    // Proxy via Netlify _redirects to public origin; keep relative NEXT_PUBLIC_API_URL=/api
     const redirects = `/api/*  ${apiOrigin}/api/:splat  200\n`;
     fs.mkdirSync(path.dirname(REDIRECTS_PATH), { recursive: true });
     fs.writeFileSync(REDIRECTS_PATH, redirects, 'utf8');
     childEnv.API_ORIGIN = apiOrigin;
     childEnv.NEXT_PUBLIC_API_URL = publicApiUrl || '/api';
-    childEnv.ALLOW_PRIVATE_API_REWRITE = 'false';
-    console.log(`[build-cdn] Public proxy: /api → ${apiOrigin}`);
-  } else if (apiOrigin && isPrivateHostname(apiOrigin)) {
-    fail(
-      `API_ORIGIN is private (${apiOrigin}). Netlify cannot reach 127.0.0.1 ` +
-        '(DNS_HOSTNAME_RESOLVED_PRIVATE).\n' +
-        '  Set NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API/api in Netlify environment variables.'
-    );
+    console.log(`[build-cdn] Public API (proxy): /api → ${apiOrigin}`);
   } else {
-    fail(
-      'No public API configured for CDN deploy.\n' +
-        '  In Netlify → Site settings → Environment variables, set:\n' +
-        '    NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API.example.com/api\n' +
-        '  Deploy the Express API on Railway/Render/VPS first, then paste its public HTTPS URL.'
+    // Deploy still succeeds — pages load; API calls show a config message until env is set.
+    childEnv.NEXT_PUBLIC_API_URL = '';
+    childEnv.NEXT_PUBLIC_API_UNCONFIGURED = '1';
+    if (apiOrigin && isPrivateHostname(apiOrigin)) {
+      console.warn(
+        `[build-cdn] Ignoring private API_ORIGIN (${apiOrigin}) — would cause DNS_HOSTNAME_RESOLVED_PRIVATE`
+      );
+    }
+    console.warn(
+      '[build-cdn] No public API URL set. Site will deploy, but login/API will not work until you set:\n' +
+        '  NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API/api\n' +
+        '  Then redeploy. Also set CORS_ORIGINS on the API host to your Netlify/Vercel URL.'
     );
   }
 
@@ -119,7 +116,7 @@ function main() {
   });
   if (verify.status !== 0) process.exit(verify.status ?? 1);
 
-  console.log('[build-cdn] Success — safe for Netlify/Vercel');
+  console.log('[build-cdn] Success — safe for Netlify/Vercel (no private DNS rewrites)');
 }
 
 main();

@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
-import { ApiError } from '@/lib/api';
+import { ApiError, isApiConfigured } from '@/lib/api';
 import Image from "next/image";
 import logo from "../../assets/logo.jpg";
 
@@ -120,6 +120,17 @@ function LoginForm() {
                 Access your construction management dashboard
               </p>
             </div>
+
+            {!isApiConfigured() && (
+              <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-medium">API not configured for this deploy</p>
+                <p className="mt-1 text-amber-800">
+                  Set <code className="text-xs">NEXT_PUBLIC_API_URL</code> to your public API HTTPS
+                  URL in Netlify/Vercel (e.g. <code className="text-xs">https://your-api.example.com/api</code>),
+                  set <code className="text-xs">CORS_ORIGINS</code> on the API host, then redeploy.
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div>

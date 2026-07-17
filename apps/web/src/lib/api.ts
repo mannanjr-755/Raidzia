@@ -1,4 +1,20 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, '');
+const API_UNCONFIGURED = process.env.NEXT_PUBLIC_API_UNCONFIGURED === '1';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || (API_UNCONFIGURED ? '' : '/api')).replace(
+  /\/$/,
+  ''
+);
+
+/** True when CDN deploy has no public API URL configured. */
+export function isApiConfigured(): boolean {
+  if (API_UNCONFIGURED || !API_URL) return false;
+  if (API_URL.startsWith('http://') || API_URL.startsWith('https://')) return true;
+  // Relative /api is valid for same-host (Railway) and local dev.
+  return API_URL === '/api' || API_URL.startsWith('/');
+}
+
+export function getApiBaseUrl(): string {
+  return API_URL;
+}
 
 const ACCESS_TOKEN_KEY = 'rss_access_token';
 const REFRESH_TOKEN_KEY = 'rss_refresh_token';
@@ -156,12 +172,18 @@ async function request<T>(
 
   let res: Response;
   try {
+    if (!API_URL) {
+      throw new ApiError(
+        'API is not configured. In Netlify/Vercel set NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API/api and redeploy. Deploy the Express API on Railway/Render first.',
+        0
+      );
+    }
     res = await fetch(`${API_URL}${path}`, { ...options, headers });
-  } catch {
-    const hint =
-      API_URL.startsWith('http')
-        ? `Cannot reach API at ${API_URL}. Check NEXT_PUBLIC_API_URL and CORS_ORIGINS.`
-        : `Cannot reach API at ${API_URL}. For Netlify/Vercel set NEXT_PUBLIC_API_URL to your public API (https://…). Locally run "npm run dev".`;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    const hint = API_URL.startsWith('http')
+      ? `Cannot reach API at ${API_URL}. Check NEXT_PUBLIC_API_URL and CORS_ORIGINS on the API host.`
+      : `Cannot reach API at ${API_URL || '(not set)'}. For Netlify/Vercel set NEXT_PUBLIC_API_URL to your public API HTTPS URL. Locally run "npm run dev".`;
     throw new ApiError(hint, 0);
   }
 

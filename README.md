@@ -33,28 +33,16 @@ This runs `scripts/run-prod.ts` which starts the API, waits for health check, th
 
 ### Netlify / Vercel (frontend only)
 
-These platforms **cannot** run Express and **cannot** proxy to `127.0.0.1`.
-That causes `DNS_HOSTNAME_RESOLVED_PRIVATE`.
+See **[DEPLOY.md](./DEPLOY.md)** for step-by-step instructions.
 
-**Required Netlify environment variable:**
+Quick setup:
 
-```
-NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API.example.com/api
-```
+1. Deploy API on Railway/Render (`npm run build:api && npm run start:api`)
+2. Set Netlify/Vercel env: `NEXT_PUBLIC_API_URL=https://YOUR-API/api`
+3. Set API env: `CORS_ORIGINS=https://YOUR-SITE.netlify.app`
+4. Deploy frontend (`npm run build:cdn` via `netlify.toml` / `vercel.json`)
 
-**On the API host** (Railway / Render / VPS):
-
-```
-CORS_ORIGINS=https://YOUR-SITE.netlify.app
-```
-
-Then trigger a new Netlify deploy. The build (`npm run build:cdn`) will fail if a private API URL is still configured.
-
-**Never set on Netlify:**
-- `API_ORIGIN=http://127.0.0.1:4000`
-- `NEXT_PUBLIC_API_URL=/api` alone (relative without a public API)
-
-Prefer full-stack on Railway/Render (`npm run build` + `npm start`) if you want one service for both.
+CDN builds never embed `127.0.0.1` rewrites (prevents `DNS_HOSTNAME_RESOLVED_PRIVATE`).
 
 ### Other platforms
 

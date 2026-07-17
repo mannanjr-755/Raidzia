@@ -74,19 +74,13 @@ if (usesDirectPublicApi) {
   if (allowPrivate && !onCdn) {
     rewriteDestination = `${rawApiOrigin}/api/:path*`;
     console.log(`[next.config] Same-host private rewrite (allowed) → ${rewriteDestination}`);
-  } else if (onCdn) {
-    throw new Error(
-      [
-        `[next.config] Refusing private API rewrite (${rawApiOrigin}).`,
-        'This causes DNS_HOSTNAME_RESOLVED_PRIVATE on Netlify/Vercel.',
-        '',
-        'Set NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API/api in your CDN environment.',
-      ].join('\n')
-    );
   } else {
+    // CDN or unset: never throw — skip rewrite so deploys do not embed private DNS.
     console.warn(
-      `[next.config] Skipping private rewrite (${rawApiOrigin}). ` +
-        'Set ALLOW_PRIVATE_API_REWRITE=true for same-host, or use a public NEXT_PUBLIC_API_URL.'
+      `[next.config] Skipping private rewrite (${rawApiOrigin || 'default'}). ` +
+        (onCdn
+          ? 'CDN build: set NEXT_PUBLIC_API_URL=https://YOUR-PUBLIC-API/api'
+          : 'Set ALLOW_PRIVATE_API_REWRITE=true for same-host deploys.')
     );
     rewriteDestination = null;
   }
