@@ -55,3 +55,9 @@ apps/web/public/_redirects
 # local uploads
 apps/api/uploads/
 
+.vercel
+.env*
+
+.vercel-api-wire.json
+.env.vercel.pull.tmp
+.env.vercel*.tmp

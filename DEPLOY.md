@@ -1,4 +1,4 @@
-# Deploy on Netlify or Vercel (Frontend)
+﻿# Deploy on Netlify or Vercel (Frontend)
 
 The Express API (`apps/api`) **cannot** run on Netlify or Vercel. Deploy it on Railway, Render, or a VPS, then connect the frontend.
 
@@ -33,7 +33,7 @@ CORS_ALLOW_DEPLOY_PREVIEWS=true
 1. Import the GitHub repo: `https://github.com/mannanjr-755/Raidzia`
 2. **Package directory:** `apps/web`
 3. **Base directory:** leave empty (repo root)
-4. Build uses `netlify.toml` → `npm run build:cdn`
+4. Build uses `netlify.toml` â†’ `npm run build:cdn`
 5. Environment variable:
 
 ```
@@ -41,6 +41,15 @@ NEXT_PUBLIC_API_URL=https://YOUR-API-HOST/api
 ```
 
 6. Deploy
+
+## Production URLs (current)
+
+- Frontend: `https://raidzia-api.vercel.app`
+- API: `https://raidzia-backend.vercel.app/api`
+- Database: Neon (`raidzia-erp`)
+
+Required Vercel env on frontend: `NEXT_PUBLIC_API_URL=https://raidzia-backend.vercel.app/api`
+Required API env: `CORS_ORIGINS` includes the frontend origin.
 
 ## 3. Deploy the frontend (Vercel)
 
@@ -50,7 +59,7 @@ tree (`next.config.ts` + `src/`), so **Root Directory must be configured correct
 ### Recommended (Root Directory = `apps/web`)
 
 1. Import the same repo on Vercel
-2. **Root Directory:** `apps/web` (Project Settings → General)
+2. **Root Directory:** `apps/web` (Project Settings â†’ General)
 3. Enable **Include source files outside of the Root Directory**
 4. Install / Build come from `apps/web/vercel.json` (`cd ../.. && npm install` / `build:cdn`)
 5. Environment variable:
@@ -64,7 +73,7 @@ NEXT_PUBLIC_API_URL=https://YOUR-API-HOST/api
 ### Alternative (Root Directory = repository root)
 
 `vercel.json` at the repo root runs `npm run build:vercel`, which builds `apps/web`
-then stages `apps/web/.next` → `./.next` so Vercel’s Next.js preset finds the output.
+then stages `apps/web/.next` â†’ `./.next` so Vercelâ€™s Next.js preset finds the output.
 
 Still set:
 
@@ -94,3 +103,4 @@ npm start
 ```
 
 See `railway.toml` and `render.yaml`.
+
