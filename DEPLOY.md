@@ -1,6 +1,7 @@
 ﻿# Deploy on Netlify or Vercel (Frontend)
 
-The Express API (`apps/api`) **cannot** run on Netlify or Vercel. Deploy it on Railway, Render, or a VPS, then connect the frontend.
+The Express API is best as a long-running service (Railway/Render/VPS). This project
+also supports an API-only Vercel serverless deploy (`apps/api` → `raidzia-backend`).
 
 ## 1. Deploy the API (required)
 
