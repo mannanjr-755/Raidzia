@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc",
+    "build": "tsx ../../scripts/prisma-generate-api.ts && tsc",
     "start": "node dist/index.js",
-    "db:generate": "prisma generate",
+    "db:generate": "tsx ../../scripts/prisma-generate-api.ts",
     "db:push": "prisma db push",
     "db:push:force": "prisma db push --accept-data-loss",
     "db:seed": "tsx prisma/seed.ts",

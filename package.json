@@ -13,6 +13,8 @@
     "dev:web": "npm run dev --workspace=@rss/web",
     "dev:legacy": "next dev",
     "postinstall": "tsx scripts/postinstall.ts",
+    "db:generate": "prisma generate --schema=apps/api/prisma/schema.prisma",
+    "prisma:generate": "tsx scripts/postinstall.ts",
     "build": "tsx scripts/build-full.ts",
     "build:root": "npx prisma generate --schema=prisma/schema.prisma && next build",
     "build:web": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/web",
