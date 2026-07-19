@@ -1,11 +1,13 @@
 /**
- * Bundle Express API for Vercel serverless (@vercel/node).
+ * Bundle Express API entry for Vercel — writes directly to api/index.js.
  */
 import { spawnSync } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 
 const ROOT = path.resolve(__dirname, '..');
 const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const outFile = path.join(ROOT, 'apps/api/api/index.js');
 
 function run(cmd: string, args: string[]) {
   const r = spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', shell: true });
@@ -21,8 +23,13 @@ run(npmBin, [
   '--bundle',
   '--platform=node',
   '--target=node20',
-  '--outfile=apps/api/api/handler.js',
+  '--outfile=apps/api/api/index.js',
   '--packages=external',
 ]);
 
-console.log('[build-api-vercel] handler.js ready');
+if (!fs.existsSync(outFile) || fs.statSync(outFile).size < 1000) {
+  console.error('[build-api-vercel] api/index.js bundle missing or too small');
+  process.exit(1);
+}
+
+console.log(`[build-api-vercel] api/index.js ready (${fs.statSync(outFile).size} bytes)`);

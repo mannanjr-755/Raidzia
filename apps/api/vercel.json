@@ -1,12 +1,5 @@
 {
-  "version": 2,
   "installCommand": "cd ../.. && npm install --include=dev",
   "buildCommand": "cd ../.. && npm run build:api:vercel",
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [{ "src": "/(.*)", "dest": "api/index.js" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
 }
