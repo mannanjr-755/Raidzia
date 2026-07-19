@@ -1,0 +1,28 @@
+# Railway — API only (for split deploy with Vercel/Netlify frontend)
+#
+# Use when the Next.js app is on Vercel and this service is only Express + Prisma.
+#
+# Required env:
+#   DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET
+#   CORS_ORIGINS=https://raidzia-api.vercel.app,https://YOUR-CUSTOM-DOMAIN
+# Optional:
+#   API_PORT / PORT, TRUST_PROXY=1, CORS_ALLOW_DEPLOY_PREVIEWS=true
+#
+# After deploy, set on Vercel frontend:
+#   NEXT_PUBLIC_API_URL=https://YOUR-RAILWAY-API.up.railway.app/api
+#   then Redeploy the frontend (NEXT_PUBLIC_* is build-time).
+
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build:api"
+
+[deploy]
+startCommand = "npm run start:api"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
+
+[build.environment]
+SKIP_PRISMA_GENERATE = "false"
+NODE_ENV = "production"
