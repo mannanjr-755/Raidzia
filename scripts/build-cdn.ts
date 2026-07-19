@@ -46,11 +46,14 @@ function main() {
   const apiOrigin = (process.env.API_ORIGIN || '').trim().replace(/\/$/, '');
   const publicApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim().replace(/\/$/, '');
 
+  const onVercel = process.env.VERCEL === '1';
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    NETLIFY: 'true',
+    // Mark as CDN so next.config never embeds private rewrites
+    ...(onVercel ? { VERCEL: '1' } : { NETLIFY: 'true' }),
     SKIP_PRIVATE_API_REWRITE: 'true',
     ALLOW_PRIVATE_API_REWRITE: 'false',
+    SKIP_PRISMA_GENERATE: 'true',
     // Block apps/web/.env.local from injecting private API_ORIGIN
     API_ORIGIN: '',
   };

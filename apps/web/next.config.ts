@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import path from 'path';
 
 /**
  * API proxy rewrites — CRITICAL FOR CDN DEPLOYS
@@ -98,9 +99,15 @@ if (usesDirectPublicApi) {
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Monorepo: trace files from repo root (required for correct Vercel serverless bundles)
+  outputFileTracingRoot: path.join(__dirname, '../..'),
   transpilePackages: [],
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Legacy root app and workspace types must not block the CDN web build
+    ignoreBuildErrors: false,
   },
   async rewrites() {
     if (!rewriteDestination) return [];

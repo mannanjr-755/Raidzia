@@ -44,16 +44,35 @@ NEXT_PUBLIC_API_URL=https://YOUR-API-HOST/api
 
 ## 3. Deploy the frontend (Vercel)
 
-1. Import the same repo
-2. Root Directory: leave as repo root (or configure monorepo root)
-3. Build Command: `npm run build:cdn`
-4. Environment variable:
+The real Next.js app lives in `apps/web`. The repo root also has a legacy Next.js
+tree (`next.config.ts` + `src/`), so **Root Directory must be configured correctly**.
+
+### Recommended (Root Directory = `apps/web`)
+
+1. Import the same repo on Vercel
+2. **Root Directory:** `apps/web` (Project Settings → General)
+3. Enable **Include source files outside of the Root Directory**
+4. Install / Build come from `apps/web/vercel.json` (`cd ../.. && npm install` / `build:cdn`)
+5. Environment variable:
 
 ```
 NEXT_PUBLIC_API_URL=https://YOUR-API-HOST/api
 ```
 
-5. Deploy
+6. Deploy
+
+### Alternative (Root Directory = repository root)
+
+`vercel.json` at the repo root runs `npm run build:vercel`, which builds `apps/web`
+then stages `apps/web/.next` → `./.next` so Vercel’s Next.js preset finds the output.
+
+Still set:
+
+```
+NEXT_PUBLIC_API_URL=https://YOUR-API-HOST/api
+```
+
+**Never** set `API_ORIGIN=http://127.0.0.1:4000` on Vercel (causes `DNS_HOSTNAME_RESOLVED_PRIVATE`).
 
 ## Why this setup?
 
