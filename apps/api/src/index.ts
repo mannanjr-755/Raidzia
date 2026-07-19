@@ -111,12 +111,6 @@ async function start() {
     process.exit(1);
   }
 
-  // Serverless hosts (e.g. Vercel) import this module — do not call listen().
-  if (process.env.VERCEL || process.env.SKIP_API_LISTEN === '1') {
-    console.log('RSS ERP API ready (serverless / no listen)');
-    return;
-  }
-
   app.listen(PORT, '0.0.0.0', () => {
     const origins = getConfiguredOrigins();
     const allowLocal =
@@ -136,6 +130,15 @@ async function start() {
   });
 }
 
-start();
+// Serverless hosts import this module — skip listen() and eager connect.
+if (process.env.VERCEL || process.env.SKIP_API_LISTEN === '1') {
+  try {
+    assertJwtSecretsConfigured();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+  }
+} else {
+  start();
+}
 
 export default app;

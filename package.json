@@ -22,6 +22,7 @@
     "build:cdn": "tsx scripts/build-cdn.ts",
     "build:vercel": "tsx scripts/build-vercel.ts",
     "build:api": "npm run build --workspace=@rss/shared && npm run build --workspace=@rss/api",
+    "build:api:vercel": "tsx scripts/build-api-vercel.ts",
     "build:legacy": "prisma generate --schema=prisma/schema.prisma && next build",
     "verify:build": "tsx scripts/verify-build.ts",
     "verify:cdn": "tsx scripts/verify-no-private-rewrites.ts",

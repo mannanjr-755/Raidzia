@@ -1,3 +1,4 @@
 ﻿# Build artifacts for Vercel serverless packaging
 api/_app/
+api/handler.js
 dist/

@@ -1,17 +1,11 @@
 {
   "version": 2,
   "installCommand": "cd ../.. && npm install --include=dev",
-  "buildCommand": "cd ../.. && npm run build:api && node -e \"require('fs').cpSync('apps/api/dist','apps/api/api/_app',{recursive:true})\"",
+  "buildCommand": "cd ../.. && npm run build:api:vercel",
   "builds": [
     {
       "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "api/_app/**",
-          "prisma/**"
-        ]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [{ "src": "/(.*)", "dest": "api/index.js" }]
