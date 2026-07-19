@@ -1,0 +1,9 @@
+﻿.node_modules
+**/.next
+.next
+.data
+**/.data
+.git
+.env*.local
+apps/api/dist
+packages/shared/dist
