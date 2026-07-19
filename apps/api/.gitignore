@@ -1,0 +1,3 @@
+﻿# Build artifacts for Vercel serverless packaging
+api/_app/
+dist/
